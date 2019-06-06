@@ -26,3 +26,30 @@ function load_vue_scripts() {
 	);
 }
 add_action( 'wp_enqueue_scripts', 'load_vue_scripts', 100 );
+
+include '_customs/post_type_portfolio.php';
+include '_customs/tax_product_type.php';
+include '_customs/tax_categories.php';
+include '_customs/tax_tags.php';
+include '_customs/tax_color.php';
+
+
+add_filter( 'register_taxonomy_args', 'custom_taxonomies', 10, 2 );
+function custom_taxonomies( $args, $taxonomy_name ) {
+    if ( 'product_type' === $taxonomy_name ) {
+        $args['show_in_rest'] = true;
+        $args['rest_base']             = 'product_type';
+        $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
+    }
+    if ( 'portfolio_colors' === $taxonomy_name ) {
+        $args['show_in_rest'] = true;
+        $args['rest_base']             = 'portfolio_colors';
+        $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
+    }
+    if ( 'portfolio_tags' === $taxonomy_name ) {
+        $args['show_in_rest'] = true;
+        $args['rest_base']             = 'portfolio_tags';
+        $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
+    }
+    return $args;
+}
