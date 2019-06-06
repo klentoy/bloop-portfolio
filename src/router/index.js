@@ -6,6 +6,7 @@ import Router from "vue-router";
 import Home from "../components/Home.vue";
 import Post from "../components/Post/Post.vue";
 import Page from "../components/Page/Page.vue";
+import Project from "../components/Project/Project.vue";
 
 Vue.use(Router);
 
@@ -21,6 +22,12 @@ const router = new Router({
       path: "/:year/:month/:day/:postSlug",
       name: "Post",
       component: Post
+    },
+    {
+      // Assuming you're using the default permalink structure for posts
+      path: "/portfolio/:projectSlug",
+      name: "Project",
+      component: Project
     },
     {
       path: "/:pageSlug",

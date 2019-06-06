@@ -57,11 +57,11 @@ export default {
 
   getProjects(limit, cb) {
     if (_.isEmpty(limit)) {
-      let limit = 5;
+      let limit = 20;
     }
 
     axios
-      .get(SETTINGS.API_BASE_PATH + "projects?per_page=" + limit)
+      .get(SETTINGS.API_BASE_PATH + "portfolios?per_page=" + limit)
       .then(response => {
         cb(response.data);
       })

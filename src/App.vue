@@ -1,6 +1,6 @@
 <template>
   <div id="my-app" class="page-wrapper">
-    <app-header/>
+    <!-- <app-header/> -->
 
     <transition
       name="loader-animation"
@@ -16,7 +16,7 @@
       </div>
     </transition>
 
-    <app-footer/>
+    <!-- <app-footer/> -->
   </div>
 </template>
 

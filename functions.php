@@ -36,6 +36,11 @@ include '_customs/tax_color.php';
 
 add_filter( 'register_taxonomy_args', 'custom_taxonomies', 10, 2 );
 function custom_taxonomies( $args, $taxonomy_name ) {
+    if ( 'categories' === $taxonomy_name ) {
+        $args['show_in_rest'] = true;
+        $args['rest_base']             = 'categories';
+        $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
+    }
     if ( 'product_type' === $taxonomy_name ) {
         $args['show_in_rest'] = true;
         $args['rest_base']             = 'product_type';

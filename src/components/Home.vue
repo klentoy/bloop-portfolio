@@ -1,7 +1,7 @@
 <template>
   <div>
-    
-    <projects-widget limit="5">Projects</projects-widget>
+    <!-- <recent-posts-widget limit="5">Recent Posts</recent-posts-widget> -->
+    <projects-widget limit="20">Projects</projects-widget>
   </div>
 </template>
 
