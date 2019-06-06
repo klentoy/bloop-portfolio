@@ -7,6 +7,7 @@ import hub from './modules/hub'
 import user from './modules/user'
 import post from './modules/post'
 import page from './modules/page'
+import project from './modules/project'
 import categories from './modules/categories'
 
 Vue.use(Vuex)
@@ -27,6 +28,7 @@ export default new Vuex.Store({
     user,
     post,
     page,
+    project,
     categories
   },
   strict: debug,

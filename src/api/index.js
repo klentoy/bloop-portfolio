@@ -53,5 +53,20 @@ export default {
       .catch(e => {
         cb(e);
       });
+  },
+
+  getProjects(limit, cb) {
+    if (_.isEmpty(limit)) {
+      let limit = 5;
+    }
+
+    axios
+      .get(SETTINGS.API_BASE_PATH + "projects?per_page=" + limit)
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
   }
 };

@@ -15,6 +15,7 @@ import { mapGetters } from "vuex";
 import SETTINGS from "../../settings";
 
 export default {
+  
   data() {
     return {
       post: false
@@ -31,7 +32,7 @@ export default {
     getPost: function() {
       axios
         .get(
-          SETTINGS.API_BASE_PATH + "posts?slug=" + this.$route.params.postSlug
+          SETTINGS.API_BASE_PATH + "posts?slug=" + 'hello-world'
         )
         .then(response => {
           this.post = response.data[0];
