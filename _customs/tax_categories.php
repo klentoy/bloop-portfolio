@@ -33,7 +33,7 @@ function custom_taxonomy_categories() {
 		'show_in_nav_menus'          => true,
 		'show_tagcloud'              => true,
 	);
-	register_taxonomy( 'categories', array( 'portfolio' ), $args );
+	register_taxonomy( 'portfolio_categories', array( 'portfolio' ), $args );
 
 }
 add_action( 'init', 'custom_taxonomy_categories', 0 );

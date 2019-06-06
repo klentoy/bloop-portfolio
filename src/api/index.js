@@ -7,7 +7,7 @@ export default {
     axios
       .get(
         SETTINGS.API_BASE_PATH +
-          "categories?sort=name&hide_empty=true&per_page=50"
+        "categories?sort=name&hide_empty=true&per_page=50"
       )
       .then(response => {
         cb(response.data.filter(c => c.name !== "Uncategorized"));
@@ -47,6 +47,49 @@ export default {
 
     axios
       .get(SETTINGS.API_BASE_PATH + "posts?per_page=" + limit)
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
+  },
+
+
+  // New APIs
+  getColors(cb) {
+    axios
+      .get(SETTINGS.API_BASE_PATH + "portfolio_colors")
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
+  },
+  getTags(cb) {
+    axios
+      .get(SETTINGS.API_BASE_PATH + "portfolio_tags")
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
+  },
+  getProductType(cb) {
+    axios
+      .get(SETTINGS.API_BASE_PATH + "product_type")
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
+  },
+  getPortfolioCats(cb) {
+    axios
+      .get(SETTINGS.API_BASE_PATH + "portfolio_categories")
       .then(response => {
         cb(response.data);
       })

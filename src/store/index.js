@@ -27,7 +27,7 @@ export default new Vuex.Store({
     user,
     post,
     page,
-    categories
+    categories,
   },
   strict: debug,
   plugins: [localStorage]

@@ -41,6 +41,11 @@ function custom_taxonomies( $args, $taxonomy_name ) {
         $args['rest_base']             = 'product_type';
         $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
     }
+    if ( 'portfolio_categories' === $taxonomy_name ) {
+        $args['show_in_rest'] = true;
+        $args['rest_base']             = 'portfolio_categories';
+        $args['rest_controller_class'] = 'WP_REST_Terms_Controller';
+    }
     if ( 'portfolio_colors' === $taxonomy_name ) {
         $args['show_in_rest'] = true;
         $args['rest_base']             = 'portfolio_colors';
