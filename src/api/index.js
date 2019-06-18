@@ -62,6 +62,12 @@ export default {
 
     axios
       .get(SETTINGS.API_BASE_PATH + "portfolios?per_page=" + limit)
+      .then(response => {
+        cb(response.data);
+      })
+      .catch(e => {
+        cb(e);
+      });
   },
   
   // New APIs

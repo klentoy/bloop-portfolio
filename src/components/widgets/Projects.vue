@@ -1,25 +1,30 @@
 <template>
-  <div class="widget recent-projects">
-    <h3>
-      <slot></slot>
-    </h3>
-    
-    <div id="projects-wrapper" v-if="recentProjectsLoaded">
-      <div class="project-item" v-for="project in recentProjects(limit)" :key="project.id">
-        <router-link :to="project.slug">
-          
-          <img :src="project.acf.project_desktop_view">
+  <div class="widget recent-posts">
+    <div class="search-bar-section">
+      <input type="text" class="form-control" placeholder="Enter portfolio name" v-model="search" v-on:keyup="getfilteredData">
+    </div>
 
-          <div class="project-info">
-            <p>{{ project.title.rendered }}</p>
+    <product-type @getSelected="getSelected"></product-type>
 
-            <!-- TODO: getCategories() -->
-            <p>Categories: {{ project.categories }}</p>
+    <!-- <div v-for="(stack,index) in stacks" :key="index" class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox"  v-model="stack.checked" v-on:change="getfilteredData">
+      <label class="form-check-label">
+      {{ stack.value }}
+      </label>
+    </div> -->
 
-            <!-- TODO: getColors() -->
-            <p>Site Colors: {{ project.portfolio_colors }}</p>
+    <div class="posts" v-if="recentProjectsLoaded">
+      <div class="item" v-for="post in filteredData" :key="post.id">
+        <!-- {{ post.name }} -->
+        {{ post.title.rendered }}
+        <!-- <router-link :to="post.slug">{{ post.title.rendered }}</router-link>
+ -->
+         <div class="categories">
+          <div class="category" v-for="cat in post.cats" :key="cat.term_id">
+            <span>{{ cat.cat_name }}</span>
           </div>
-        </router-link>
+        </div>
+
       </div>
     </div>
 
@@ -29,47 +34,96 @@
 
 <script>
 import { mapGetters } from "vuex";
+import ProductType from "../filters/ProductType.vue";
 
 export default {
+  components: {
+    ProductType,
+  },
+  data: function() {
+    return {
+      filteredData: [],
+      search: '',
+      product_types: []   
+    }
+  },
   props: ["limit"],
   computed: {
     ...mapGetters({
       recentProjects: "recentProjects",
       recentProjectsLoaded: "recentProjectsLoaded"
-    })
-  },
+    }),
+    selectedFilters: function() {
+      let filters = [];
+      let checkedFiters = this.product_types.filter(obj => obj.checked);
+      checkedFiters.forEach(element => {
+        filters.push(element.value);
+      });
 
+
+      return this.product_types;
+    },
+  },
+  methods: {
+    getfilteredData: function() {
+      this.filteredData = this.recentProjects(this.limit);
+      let filteredDataByfilters = [];
+      let filteredDataBySearch = [];
+      // first check if filters where selected
+
+      
+      if (this.product_types.length > 0) {
+        filteredDataByfilters = this.filteredData.filter(obj => this.product_types.some(val => obj.product_type.indexOf(parseInt(val)) >= 0));
+        this.filteredData = filteredDataByfilters;
+      }
+
+      // then filter according to keyword, for now this only affects the name attribute of each data
+      if (this.search !== '') {
+        filteredDataBySearch = this.filteredData.filter(obj => obj.title.rendered.toLowerCase().match(this.search.toLowerCase()));
+        this.filteredData = filteredDataBySearch;
+      }
+    },
+    getSelected: function(value) {
+      this.product_types = value;
+
+      this.getfilteredData();
+
+    }
+  },
   mounted() {
     this.$store.dispatch("getProjects", { limit: this.limit });
+    this.getfilteredData();
   }
 };
 </script>
 
 <style scoped>
-  #projects-wrapper {
+  .search-bar-section { margin: 20px 0;}
+  .posts {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
   }
 
-  .project-item {
+  .item {
+    width: 40%;
     background: #eaeaea;
-    width: 32%;
+    padding: 20px;
     margin-bottom: 10px;
-    box-sizing: border-box;
   }
 
-  .project-info {
-    padding: 0 30px;
+  .categories {
+    margin-top: 17px;
   }
 
-  .project-item a {
-    color: #212121;
-    text-decoration: none;
-  }
-
-  .project-item img {
-    width: 100%;
+  .category {
+      font-size: 12px;
+      display: inline-block;
+      background: #212121;
+      padding: 5px;
+      border-radius: 5px;
+      color: #fff;
+      margin-right: 4px;
   }
 
 </style>

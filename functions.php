@@ -63,3 +63,28 @@ function custom_taxonomies( $args, $taxonomy_name ) {
     }
     return $args;
 }
+
+
+function prepare_rest($data, $post, $request) {
+	$_data = $data->data;
+
+	$cats = get_the_category( $post->ID );
+	$_data['cats'] = $cats;
+
+	$data->data = $_data;
+
+	return $data;
+}
+add_filter('rest_prepare_post', 'prepare_rest', 10, 3);
+
+function prepare_rest_proj($data, $post, $request) {
+	$_data = $data->data;
+
+	$cats = get_the_category( $post->ID );
+	$_data['cats'] = $cats;
+
+	$data->data = $_data;
+
+	return $data;
+}
+add_filter('rest_prepare_portfolio', 'prepare_rest_proj', 10, 3);
