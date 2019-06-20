@@ -80,8 +80,8 @@ add_filter('rest_prepare_post', 'prepare_rest', 10, 3);
 function prepare_rest_proj($data, $post, $request) {
 	$_data = $data->data;
 
-	$cats = get_the_category( $post->ID );
-	$_data['cats'] = $cats;
+	$product_type = get_the_terms( $post->ID, 'product_type' );
+	$_data['prod_type'] = $product_type;
 
 	$data->data = $_data;
 

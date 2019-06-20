@@ -62,3 +62,10 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+  .site-content { 
+    max-width: 80%;
+    width: 100%;   
+  }
+</style>
