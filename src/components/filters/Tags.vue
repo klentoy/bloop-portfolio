@@ -1,8 +1,8 @@
 <template>
-    <div>
-        <select name="" id="" v-model="tag">
-            <option value="" v-for="tag in tags" v-bind:key="tag.id">{{tag.name}}</option>
-        </select>
+    <div class="tags-filter-wrap">
+        <span v-for="tag in tags" v-bind:key="tag.id">
+            <input type="checkbox" :value="tag.id" v-model="selectedTags" v-on:change="updateValue($event.target.value)"> <span class="checkbox-label"> {{tag.name}} </span> <br>
+        </span>
     </div>
 </template>
 <script>
@@ -12,7 +12,8 @@ export default {
     data(){
         return {
             tag: '',
-            tags: []
+            tags: [],
+            selectedTags: []
         }
     },
     created() {
@@ -27,6 +28,12 @@ export default {
         // commit(types.PAGES_LOADED, true);
         // commit(types.INCREMENT_LOADING_PROGRESS);
         // });
+    },
+
+    methods: {
+        updateValue: function (value) {
+            this.$emit('getSelectedTags', this.selectedTags);
+        }
     }
 }
 </script>

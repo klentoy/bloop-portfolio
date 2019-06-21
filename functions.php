@@ -100,6 +100,8 @@ function prepare_rest_proj($data, $post, $request)
 }
 add_filter('rest_prepare_portfolio', 'prepare_rest_proj', 10, 3);
 
+$product_type = get_the_terms( $post->ID, 'product_type' );
+$_data['prod_type'] = $product_type;
 
 /*
 #

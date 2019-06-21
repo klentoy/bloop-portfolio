@@ -1,21 +1,8 @@
 <template>
-    <div>
-        <!-- <select name="" id="" v-model="product_type">
-            <option value="" v-for="type in product_types" v-bind:key="type.id">{{type.name}}</option>
-        </select> -->
-
-        <!-- <div v-for="(product_type,index) in product_types" :key="index" class="form-check form-check-inline">
-        <input class="form-check-input" type="checkbox"  v-model="product_type.checked" v-on:change="getfilteredData">
-        <label class="form-check-label">
-        {{ product_type.value }}
-        </label>
-        </div> -->
-        <div>
-            <span v-for="type in product_types" v-bind:key="type.id">
-                <input type="checkbox" :value="type.id" v-model="selectedProductTypes" v-on:change="updateValue($event.target.value)"> <span class="checkbox-label"> {{type.name}} </span> <br>
-            </span>
-        </div>
-
+   <div class="filter-col prodtypes-filter-wrap"> 
+        <span v-for="type in product_types" v-bind:key="type.id">
+            <input type="checkbox" :value="type.id" v-model="selectedProductTypes" v-on:change="updateValue($event.target.value)"> <span class="checkbox-label"> {{type.name}} </span> <br>
+        </span>
     </div>
 </template>
 <script>
@@ -39,7 +26,7 @@ export default {
     },
     methods: {
         updateValue: function (value) {
-            this.$emit('getSelected', this.selectedProductTypes);
+            this.$emit('getSelectedPtypes', this.selectedProductTypes, 'product_type');
         }
     }
         // api.getPages(pages => {
