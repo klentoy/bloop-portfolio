@@ -1,64 +1,38 @@
 <template>
-  <div id="my-app" class="page-wrapper">
-    <!-- <app-header/> -->
+  <v-app>
+    <v-toolbar app>
+      <v-toolbar-title class="headline text-uppercase">
+        <span>Vuetify</span>
+        <span class="font-weight-light">MATERIAL DESIGN</span>
+      </v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn
+        flat
+        href="https://github.com/vuetifyjs/vuetify/releases/latest"
+        target="_blank"
+      >
+        <span class="mr-2">Latest Release</span>
+      </v-btn>
+    </v-toolbar>
 
-    <transition
-      name="loader-animation"
-      enter-active-class="animated fadeIn"
-      leave-active-class="animated fadeOut"
-    >
-      <progress-bar :show-loader="showLoader" :loader-style="loaderStyle"/>
-    </transition>
-
-    <transition name="page-transition" mode="out-in" appear>
-      <div class="site-content">
-        <router-view></router-view>
-      </div>
-    </transition>
-
-    <!-- <app-footer/> -->
-  </div>
+    <v-content>
+      <HelloWorld/>
+    </v-content>
+  </v-app>
 </template>
 
 <script>
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import Header from "./components/partials/Header.vue";
-import Footer from "./components/partials/Footer.vue";
-import ProgressBar from "./components/partials/ProgressBar.vue";
+import HelloWorld from './components/HelloWorld'
 
 export default {
-  data() {
-    return {
-      showLoader: true
-    };
-  },
-  computed: {
-    ...mapGetters({
-      isLoading: "isLoading",
-      loadingProgress: "loadingProgress"
-    }),
-
-    loaderStyle() {
-      return `width: ${this.loadingProgress}%;`;
-    }
-  },
-
+  name: 'App',
   components: {
-    appHeader: Header,
-    appFooter: Footer,
-    ProgressBar
+    HelloWorld
   },
-
-  watch: {
-    // watch the value of isLoading and once it's false hide the loader
-    isLoading(val) {
-      if (val == false) {
-        let self = this;
-        setTimeout(function() {
-          self.showLoader = false;
-        }, 1000);
-      }
+  data () {
+    return {
+      //
     }
   }
-};
+}
 </script>

@@ -1,16 +1,16 @@
 <?php
 // Register Custom Post Type
-function custom_post_type() {
+function collection_post_type() {
 
 	$labels = array(
-		'name'                  => _x( 'Portfolios', 'Post Type General Name', 'text_domain' ),
-		'singular_name'         => _x( 'Portfolio', 'Post Type Singular Name', 'text_domain' ),
-		'menu_name'             => __( 'Portfolios', 'text_domain' ),
-		'name_admin_bar'        => __( 'Portfolio', 'text_domain' ),
+		'name'                  => _x( 'Collections', 'Post Type General Name', 'text_domain' ),
+		'singular_name'         => _x( 'Collection', 'Post Type Singular Name', 'text_domain' ),
+		'menu_name'             => __( 'Collections', 'text_domain' ),
+		'name_admin_bar'        => __( 'Collections', 'text_domain' ),
 		'archives'              => __( 'Item Archives', 'text_domain' ),
 		'attributes'            => __( 'Item Attributes', 'text_domain' ),
 		'parent_item_colon'     => __( 'Parent Item:', 'text_domain' ),
-		'all_items'             => __( 'All Portfolios', 'text_domain' ),
+		'all_items'             => __( 'All Items', 'text_domain' ),
 		'add_new_item'          => __( 'Add New Item', 'text_domain' ),
 		'add_new'               => __( 'Add New', 'text_domain' ),
 		'new_item'              => __( 'New Item', 'text_domain' ),
@@ -32,11 +32,10 @@ function custom_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'text_domain' ),
 	);
 	$args = array(
-		'label'                 => __( 'Portfolio', 'text_domain' ),
-		'description'           => __( 'Portfolio for Bloop', 'text_domain' ),
+		'label'                 => __( 'Collection', 'text_domain' ),
+		'description'           => __( 'Collection of Portfolios', 'text_domain' ),
 		'labels'                => $labels,
-		'supports'              => array( 'title', 'editor' ),
-		'taxonomies'            => array( 'product_type' ),
+		'supports'              => array( 'title' ),
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
@@ -48,23 +47,22 @@ function custom_post_type() {
 		'has_archive'           => true,
 		'exclude_from_search'   => false,
 		'publicly_queryable'    => true,
-        'capability_type'       => 'page',
-        'menu_icon'             => 'dashicons-book-alt'
+		'capability_type'       => 'page',
+        'menu_icon'             => 'dashicons-forms'
 	);
-	register_post_type( 'portfolio', $args );
+	register_post_type( 'collection', $args );
 
 }
-add_action( 'init', 'custom_post_type', 0 );
-
-add_filter( 'register_post_type_args', 'my_post_type_args', 10, 2 );
-function my_post_type_args( $args, $post_type ) {
+add_action( 'init', 'collection_post_type', 0 );
+add_filter( 'register_post_type_args', 'collection_post_type_args', 10, 2 );
+function collection_post_type_args( $args, $post_type ) {
  
-    if ( 'portfolio' === $post_type ) {
+    if ( 'collection' === $post_type ) {
         $args['public'] = false;
-        $args['show_in_rest'] = true;
+        $args['show_in_rest'] = false;
  
         // Optionally customize the rest_base or rest_controller_class
-        $args['rest_base']             = 'portfolios';
+        $args['rest_base']             = 'collection';
         $args['rest_controller_class'] = 'WP_REST_Posts_Controller';
     }
  
