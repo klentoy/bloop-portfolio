@@ -188,3 +188,34 @@ add_action('rest_api_init', function(){
         }
     ));
 });
+
+function wpse_11826_search_by_title( $search, $wp_query ) {
+    if ( ! empty( $search ) && ! empty( $wp_query->query_vars['search_terms'] ) ) {
+        global $wpdb;
+
+        $q = $wp_query->query_vars;
+        $n = ! empty( $q['exact'] ) ? '' : '%';
+
+        $search = array();
+
+        foreach ( ( array ) $q['search_terms'] as $term )
+            $search[] = $wpdb->prepare( "$wpdb->posts.post_title LIKE %s", $n . $wpdb->esc_like( $term ) . $n );
+
+        if ( ! is_user_logged_in() )
+            $search[] = "$wpdb->posts.post_password = ''";
+
+        $search = ' AND ' . implode( ' AND ', $search );
+    }
+
+    return $search;
+}
+
+add_filter( 'posts_search', 'wpse_11826_search_by_title', 10, 2 );
+
+function jwt_auth_function($data, $user) {
+    $user_data = $user->data;
+    $data['user_id'] = $user_data->ID;
+    $data['user_role'] = $user->roles[0];
+    return $data;
+}
+add_filter( 'jwt_auth_token_before_dispatch', 'jwt_auth_function', 10, 2 );
