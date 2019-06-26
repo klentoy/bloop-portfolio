@@ -168,6 +168,11 @@ add_action('rest_api_init', function(){
         'callback' => function(WP_REST_Request $request){
             $portolio_id = $request['id'] ? $request['id'] : null;
             $category_name = $request['collection_name'] ? $request['collection_name'] : null;
+            $collection_id = $request['collection_id'] ? $request['collection_id'] : null;
+            if ( 'publish' == get_post_status ( $portolio_id ) ) {
+                update_field('bloop_portfolios', $portolio_id, $collection_id);
+                return wp_get_single_post($portolio_id);
+            }
             return $request->get_params();
         }
     ));
