@@ -1,4 +1,5 @@
 <?php
+function bloop_acf_fields() {
 if( function_exists('acf_add_local_field_group') ):
 
     acf_add_local_field_group(array(
@@ -80,3 +81,6 @@ if( function_exists('acf_add_local_field_group') ):
         'description' => '',
     ));
 endif;
+}
+
+add_action('acf/init', 'bloop_acf_fields');
