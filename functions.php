@@ -39,7 +39,7 @@ include '_customs/tax_color.php';
 # ACF CUSTOM FIELDS
 # this will be used as reference or 
 # custom field is not available
-# include '_customs/acf_exported_fields.php';
+include '_customs/acf_exported_fields.php';
 
 
 add_filter('register_taxonomy_args', 'custom_taxonomies', 10, 2);
