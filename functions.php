@@ -127,6 +127,29 @@ function get_tokens($token)
     return false;
 }
 
+function add_to_collect(WP_REST_Request $request){
+    $collection_id = $request['collection_id'] ? $request['collection_id'] : null;
+    $category_name = $request['collection_name'] ? $request['collection_name'] : null;
+    $portfolio_id = $request['portfolio_id'] ? $request['portfolio_id'] : null;
+    $shared_id = $request['shared_id'] ? $request['shared_id'] : null;
+    
+    if ( 'publish' == get_post_status ( $portfolio_id ) || 'private' == get_post_status ( $portfolio_id ) ) {
+        
+        $field_key = "bloop_portfolios";
+
+        $value = get_field($field_key, $collection_id);
+        $value[] = array(
+                        "bloop_collection_portfolio" => $portfolio_id,
+                        "bloop_date_created" => current_time('mysql'),
+                        "shared_id" => $shared_id
+                    );
+        $tempArr = array_unique(array_column($value, 'bloop_collection_portfolio'));
+        $new_value = array_intersect_key($value, $tempArr);
+        return update_field( $field_key, $new_value, $collection_id );
+
+    }
+    return false;
+}
 
 add_action('rest_api_init', function(){
     /**
@@ -134,7 +157,7 @@ add_action('rest_api_init', function(){
      * API: collections/v2
      * Method: GET
      **/
-    register_rest_route('collections', '/v2', array(
+    register_rest_route('wp/v2', '/collection', array(
         'methods' => 'GET',
         'callback' => function(WP_REST_Request $request){
             if (! $request['token'] )
@@ -142,8 +165,10 @@ add_action('rest_api_init', function(){
         
             $tokens = get_tokens($request['token']);
             $token_ids = array();
+            $portfolios = array();
             foreach( $tokens as $token ){
-               array_push($token_ids, $token->collection_id);
+                array_push($portfolios, get_field('bloop_portfolios', $token->collection_id));
+                array_push($token_ids, $token->collection_id);
             }
             if ( $token_ids ){
                 $args = array(
@@ -151,7 +176,8 @@ add_action('rest_api_init', function(){
                     'post_status' => 'publish',
                     'post__in' => $token_ids,
                 );
-                $collections = get_posts($args);;
+                $collections = get_posts($args);
+                array_push($collections, array("porfolios"=>$portfolios));
                 return $collections;
             }
             return array('error_message'=>'Wrong token!');
@@ -159,22 +185,13 @@ add_action('rest_api_init', function(){
     ));
 
     /**
-     * API: add_to_location/v2/{$id} 
+     * API: wp/v2/add_to_collection{$id} 
      * Method: POST
-     * $id = portfolio_id
+     * $id = collection id
      **/
-    register_rest_route('add_to_collecion', '/v2/(?P<id>[\d]+)', array(
+    register_rest_route('wp/v2', '/add_to_collection', array(
         'methods' => 'POST',
-        'callback' => function(WP_REST_Request $request){
-            $portolio_id = $request['id'] ? $request['id'] : null;
-            $category_name = $request['collection_name'] ? $request['collection_name'] : null;
-            $collection_id = $request['collection_id'] ? $request['collection_id'] : null;
-            if ( 'publish' == get_post_status ( $portolio_id ) ) {
-                update_field('bloop_portfolios', $portolio_id, $collection_id);
-                return wp_get_single_post($portolio_id);
-            }
-            return $request->get_params();
-        }
+        'callback' => 'add_to_collect'
     ));
 
 
@@ -224,3 +241,18 @@ function jwt_auth_function($data, $user) {
     return $data;
 }
 add_filter( 'jwt_auth_token_before_dispatch', 'jwt_auth_function', 10, 2 );
+
+
+
+function remove_element_by_value($arr, $val) {
+    $return = array(); 
+    foreach($arr as $k => $v) {
+       if(is_array($v)) {
+          $return[$k] = remove_element_by_value($v, $val);
+          continue;
+       }
+       if($v == $val) continue;
+       $return[$k] = $v;
+    }
+    return $return;
+ }

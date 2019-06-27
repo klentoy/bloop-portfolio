@@ -59,7 +59,7 @@ function collection_post_type_args( $args, $post_type ) {
  
     if ( 'collection' === $post_type ) {
         $args['public'] = false;
-        $args['show_in_rest'] = false;
+        $args['show_in_rest'] = true;
  
         // Optionally customize the rest_base or rest_controller_class
         $args['rest_base']             = 'collection';
