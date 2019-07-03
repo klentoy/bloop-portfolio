@@ -221,9 +221,6 @@ add_action('rest_api_init', function(){
     ));
 
 
-    /** 
-    * TODO: KULANG PA NI
-    */
     register_rest_route('wp/v2', '/add_token', array(
         'methods' => 'POST',
         'callback' => function( WP_REST_Request $request_data ){
@@ -248,6 +245,16 @@ add_action('rest_api_init', function(){
                 return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
         }
     ));
+
+    register_rest_route('wp/v2', 'get_all_tokens', array(
+        'methods' => 'GET',
+        'callback' => function( WP_REST_Request $request_data ){
+            global $wpdb;
+            $results = $wpdb->get_results( "SELECT * FROM wp_blooptoken" , OBJECT );
+            return $results;
+        }
+    ));
+    
 });
 
 function bloop_wof_tokenizer(){
