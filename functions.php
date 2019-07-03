@@ -151,37 +151,63 @@ function add_to_collect(WP_REST_Request $request){
     return false;
 }
 
+function fetch_collection(WP_REST_Request $request){
+    $authorized = get_current_user_id();
+    
+    if ( $request['token'] || $authorized ){
+        $token_ids = array();
+        $portfolios = array();
+
+        if ( $request['id'] ){
+            $tokens = (array) $request['id'];
+            foreach( $tokens as $token ){
+                array_push($portfolios, get_field('bloop_portfolios', $token));
+                array_push($token_ids, $token);
+            }
+        }else if ( get_tokens($request['token']) ){
+            $tokens = get_tokens($request['token']);
+            foreach( $tokens as $token ){
+                array_push($portfolios, get_field('bloop_portfolios', $token->collection_id));
+                array_push($token_ids, $token->collection_id);
+            }
+        }
+        
+        if ( $token_ids ){
+            $args = array(
+                'post_type'   => 'collection',
+                'post_status' => 'private',
+                'post__in' => $token_ids,
+            );
+            $collections = get_posts($args);
+            array_push($collections, array("porfolios"=>$portfolios));
+            return array('collection'=>$collections);
+        }
+    }else{
+        if ( ! $authorized ){
+            return array('status'=>'error','message'=>'User not authorized!');
+        }
+        
+        if (! $request['token']){
+            return array('status'=>'error','message'=>'Token is required!');
+        }
+    }
+    return array('status'=>'error','message'=>'Wrong token!');
+}
+
 add_action('rest_api_init', function(){
     /**
      * 1 token is equal to a 1 collection
      * API: collections/v2
      * Method: GET
      **/
-    register_rest_route('wp/v2', '/collection', array(
+    register_rest_route('wp/v2', '/client_collection', array(
         'methods' => 'GET',
-        'callback' => function(WP_REST_Request $request){
-            if (! $request['token'] )
-                return array('error_message'=>'Token is required!');
-        
-            $tokens = get_tokens($request['token']);
-            $token_ids = array();
-            $portfolios = array();
-            foreach( $tokens as $token ){
-                array_push($portfolios, get_field('bloop_portfolios', $token->collection_id));
-                array_push($token_ids, $token->collection_id);
-            }
-            if ( $token_ids ){
-                $args = array(
-                    'post_type'   => 'collection',
-                    'post_status' => 'publish',
-                    'post__in' => $token_ids,
-                );
-                $collections = get_posts($args);
-                array_push($collections, array("porfolios"=>$portfolios));
-                return $collections;
-            }
-            return array('error_message'=>'Wrong token!');
-        }
+        'callback' => 'fetch_collection'
+    ));
+    
+    register_rest_route('wp/v2', '/collection/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'fetch_collection'
     ));
 
     /**
@@ -198,18 +224,38 @@ add_action('rest_api_init', function(){
     /** 
     * TODO: KULANG PA NI
     */
-    register_rest_route('add_token', '/v2', array(
+    register_rest_route('wp/v2', '/add_token', array(
         'methods' => 'POST',
         'callback' => function( WP_REST_Request $request_data ){
-            $token = openssl_random_pseudo_bytes(16);
-            $token = bin2hex($token);
+            global $wpdb;
+            $body = json_decode($request_data->get_body());
+            $collection_id = $body->collection_id; // Importante
+            $author = $body->author; // Importante
+            $remarks = $body->collection_name ? $body->collection_name : "N/A";
+            $token_generated = bloop_wof_tokenizer();
             
-            return $token;
-            return $request_data->get_params();
-        
+            if (!$collection_id || !$author)
+                return array('status'=>'error', 'message' => 'No collection ID or author!');
+            
+            $tokenized = $wpdb->insert( $wpdb->prefix . "blooptoken", array(
+                "collection_id" => $collection_id,
+                "author" => $author,
+                "remarks" => $remarks,
+                "token_generated" => $token_generated,
+            ));
+
+            if ( $tokenized )
+                return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
         }
     ));
 });
+
+function bloop_wof_tokenizer(){
+    $token = openssl_random_pseudo_bytes(5);
+    $token = bin2hex($token);
+    $token = crypt($token, '$6$'. crypt($token) .'$'. time() .'$');
+    return $token;
+}
 
 function wpse_11826_search_by_title( $search, $wp_query ) {
     if ( ! empty( $search ) && ! empty( $wp_query->query_vars['search_terms'] ) ) {
@@ -241,8 +287,6 @@ function jwt_auth_function($data, $user) {
     return $data;
 }
 add_filter( 'jwt_auth_token_before_dispatch', 'jwt_auth_function', 10, 2 );
-
-
 
 function remove_element_by_value($arr, $val) {
     $return = array(); 
