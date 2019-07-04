@@ -91,8 +91,49 @@ function prepare_rest_proj($data, $post, $request)
 {
     $_data = $data->data;
 
-    $cats = get_the_category($post->ID);
-    $_data['cats'] = $cats;
+    $cats = get_the_terms( $post->ID, 'portfolio_categories' );
+    $tags = get_the_terms( $post->ID, 'portfolio_tags' );
+    $product_type = get_the_terms( $post->ID, 'product_type' );
+    $_data['prod_type'] = $product_type;
+
+    $colors = get_the_terms( $post->ID, 'portfolio_colors' );
+    $_data['colors'] = $colors;
+
+    $web_url = get_field( 'website_url', $post->ID );
+    $_data['web_url'] = $web_url;
+
+    $desktop_thumbnail = get_field( 'desktop_thumbnail', $post->ID );
+    $_data['desktop_thumbnail'] = $desktop_thumbnail['sizes']['large'];
+
+    $mobile_thumbnail = get_field( 'mobile_thumbnail', $post->ID );
+    $_data['mobile_thumbnail'] = $mobile_thumbnail['sizes']['large'];
+
+    //get screenshots from acf field
+    $web_screenshots = get_field( 'website_screenshots', $post->ID );
+    $screenshots = [];
+    if (is_array($web_screenshots) || is_object($web_screenshots)) {
+        foreach ($web_screenshots as $screenshot) {
+            array_push($screenshots, $screenshot['sizes']['large']);
+        }
+    }
+    $_data['screenshots'] = $screenshots;
+
+    $proj_meta = [$product_type, $cats, $tags];
+    $proj_tags = [];
+
+    foreach ($proj_meta as $meta) {
+        if (is_array($meta) || is_object($meta)) {
+            foreach ($meta as $val) {
+                array_push($proj_tags, $val->name);
+            }
+        }
+    }
+    $_data['proj_tags'] = $proj_tags ;
+
+
+    //get featured image
+    $project_thumbnail = get_the_post_thumbnail_url( $post->ID,'full');
+    $_data['project_thumbnail'] = $project_thumbnail;
 
     $data->data = $_data;
 
@@ -100,8 +141,28 @@ function prepare_rest_proj($data, $post, $request)
 }
 add_filter('rest_prepare_portfolio', 'prepare_rest_proj', 10, 3);
 
-$product_type = get_the_terms( $post->ID, 'product_type' );
-$_data['prod_type'] = $product_type;
+
+function prepare_rest_collection($data, $post, $request)
+{
+    $_data = $data->data;
+
+    //get featured image
+    $portfolio_collection = get_field( 'bloop_portfolios', $post->ID);
+    $portfolio_ids = [];
+
+    foreach ($portfolio_collection as $val) {
+        array_push( $portfolio_ids, $val['bloop_collection_portfolio']);
+    }
+    $_data['portfolios'] = $portfolio_ids;
+
+    $data->data = $_data;
+
+    return $data;
+}
+add_filter('rest_prepare_collection', 'prepare_rest_collection', 10, 3);
+
+//add featured image to collection post type
+add_theme_support( 'post-thumbnails' );
 
 function get_tokens($token)
 {
@@ -212,7 +273,8 @@ add_action('rest_api_init', function(){
             $post_array = array(
                 "post_title" => $request_body->title,
                 "post_type" => $post_type,
-                "post_content" => $request_body->content
+                "post_content" => $request_body->content,
+                "post_status" => $request_body->status ? $request_body->status : "draft",
             );
 
             $post_id = wp_insert_post($post_array);
@@ -225,6 +287,7 @@ add_action('rest_api_init', function(){
                 )
             );
             update_field( $field_key, $value, $post_id );
+            return $post_id;
 
         }
     ));
@@ -239,6 +302,34 @@ add_action('rest_api_init', function(){
         'callback' => 'add_to_collect'
     ));
 
+    /**
+     * API: wp/v2/portfolio_collections/{$id} 
+     * Method: GET
+     * $id = portfolio id
+     * params: author id
+     **/
+    register_rest_route('wp/v2', '/portfolio_collections/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => function(WP_REST_Request $request){
+            global $wpdb;
+
+            if ( $request['id'] && $request['author'] ){
+                $collections = $wpdb->get_results( 
+                    "SELECT post_id 
+                    FROM wp_postmeta AS pm 
+                    JOIN wp_posts AS p  
+                    ON pm.post_id = p.ID
+                    WHERE meta_key LIKE 'bloop_portfolios_%_bloop_collection_portfolio' 
+                    AND meta_value = ". $request['id'] ." 
+                    AND post_type='collection'
+                    AND post_status = 'publish'
+                    AND post_author = ". $request['author'] ."");    
+                return array('status'=>'success', 'collection_ids'=>$collections);
+            }
+
+            return array('status'=>'error', 'message'=> 'Portfolio and Author IDs required!');
+        }
+    ));
 
     register_rest_route('wp/v2', '/add_token', array(
         'methods' => 'POST',
