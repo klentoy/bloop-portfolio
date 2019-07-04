@@ -103,20 +103,6 @@ add_filter('rest_prepare_portfolio', 'prepare_rest_proj', 10, 3);
 $product_type = get_the_terms( $post->ID, 'product_type' );
 $_data['prod_type'] = $product_type;
 
-/*
-#
-# CREATE TOKEN TABLE 
-    CREATE TABLE wp_blooptoken (
-    bt_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-    collection_id bigint(20) UNSIGNED NOT NULL,
-    token_generated longtext,
-    remarks longtext,
-    author bigint(20) UNSIGNED NOT NULL,
-    created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-    PRIMARY KEY (bt_id)
-)
-*/
-
 function get_tokens($token)
 {
     global $wpdb;
@@ -127,11 +113,16 @@ function get_tokens($token)
     return false;
 }
 
-function add_to_collect(WP_REST_Request $request){
-    $collection_id = $request['collection_id'] ? $request['collection_id'] : null;
-    $category_name = $request['collection_name'] ? $request['collection_name'] : null;
-    $portfolio_id = $request['portfolio_id'] ? $request['portfolio_id'] : null;
-    $shared_id = $request['shared_id'] ? $request['shared_id'] : null;
+add_filter('acf/rest_api/key', function ($key, $request, $type) {
+    return 'collection';
+}, 10, 3);
+
+function add_to_collect(WP_REST_Request $request_data){
+
+    $collection_id = $request_data['collection_id'] ? $request_data['collection_id'] : null;
+    $category_name = $request_data['collection_name'] ? $request_data['collection_name'] : null;
+    $portfolio_id = $request_data['portfolio_id'] ? $request_data['portfolio_id'] : null;
+    $shared_id = $request_data['shared_id'] ? $request_data['shared_id'] : null;
     
     if ( 'publish' == get_post_status ( $portfolio_id ) || 'private' == get_post_status ( $portfolio_id ) ) {
         
@@ -161,6 +152,7 @@ function fetch_collection(WP_REST_Request $request){
         if ( $request['id'] ){
             $tokens = (array) $request['id'];
             foreach( $tokens as $token ){
+                return get_post_meta($token);
                 array_push($portfolios, get_field('bloop_portfolios', $token));
                 array_push($token_ids, $token);
             }
@@ -208,6 +200,33 @@ add_action('rest_api_init', function(){
     register_rest_route('wp/v2', '/collection/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'fetch_collection'
+    ));
+
+    register_rest_route('wp/v2', '/collection', array(
+        'methods' => 'POST',
+        'callback' => function ( WP_REST_Request $request_data ){
+            $request_body = json_decode($request_data->get_body());
+            $portfolios = $request_body->bloop_portfolios[0];
+            
+            $post_type = "collection";
+            $post_array = array(
+                "post_title" => $request_body->title,
+                "post_type" => $post_type,
+                "post_content" => $request_body->content
+            );
+
+            $post_id = wp_insert_post($post_array);
+            $field_key = "field_5d142e312c5e0";
+            $value = array(
+                array(
+                    "bloop_collection_portfolio" => $portfolios->bloop_collection_portfolio,
+                    "bloop_date_created" => $portfolios->bloop_collection_portfolio,
+                    "bloop_shared_to" => $portfolios->shared_id
+                )
+            );
+            update_field( $field_key, $value, $post_id );
+
+        }
     ));
 
     /**

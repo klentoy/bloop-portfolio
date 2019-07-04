@@ -35,7 +35,7 @@ function collection_post_type() {
 		'label'                 => __( 'Collection', 'text_domain' ),
 		'description'           => __( 'Collection of Portfolios', 'text_domain' ),
 		'labels'                => $labels,
-		'supports'              => array( 'title' ),
+		'supports'              => array( 'title', 'author' ),
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
@@ -58,8 +58,9 @@ add_filter( 'register_post_type_args', 'collection_post_type_args', 10, 2 );
 function collection_post_type_args( $args, $post_type ) {
  
     if ( 'collection' === $post_type ) {
-        $args['public'] = false;
+        $args['public'] = true;
         $args['show_in_rest'] = true;
+        $args['label'] = 'collection';
  
         // Optionally customize the rest_base or rest_controller_class
         $args['rest_base']             = 'collection';
