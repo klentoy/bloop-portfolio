@@ -1,33 +1,9 @@
 <?php
-// Remove all default WP template redirects/lookups
-remove_action('template_redirect', 'redirect_canonical');
 
-// Redirect all requests to index.php so the Vue app is loaded and 404s aren't thrown
-function remove_redirects()
-{
-    add_rewrite_rule('^/(.+)/?', 'index.php', 'top');
-}
-add_action('init', 'remove_redirects');
-
-// Load scripts
-function load_vue_scripts()
-{
-    wp_enqueue_script(
-        'vuejs-wordpress-theme-starter-js',
-        get_stylesheet_directory_uri() . '/dist/scripts/index.min.bundle.js',
-        array('jquery'),
-        filemtime(get_stylesheet_directory() . '/dist/scripts/index.min.bundle.js'),
-        true
-    );
-
-    wp_enqueue_style(
-        'vuejs-wordpress-theme-starter-css',
-        get_stylesheet_directory_uri() . '/dist/styles.css',
-        null,
-        filemtime(get_stylesheet_directory() . '/dist/styles.css')
-    );
-}
-add_action('wp_enqueue_scripts', 'load_vue_scripts', 100);
+# ACF CUSTOM FIELDS
+# this will be used as reference or 
+# custom field is not available
+include '_customs/acf_exported_fields.php';
 
 include '_customs/post_type_portfolio.php';
 include '_customs/post_type_collection.php';
@@ -35,12 +11,6 @@ include '_customs/tax_product_type.php';
 include '_customs/tax_categories.php';
 include '_customs/tax_tags.php';
 include '_customs/tax_color.php';
-
-# ACF CUSTOM FIELDS
-# this will be used as reference or 
-# custom field is not available
-include '_customs/acf_exported_fields.php';
-
 
 add_filter('register_taxonomy_args', 'custom_taxonomies', 10, 2);
 function custom_taxonomies($args, $taxonomy_name)
@@ -178,8 +148,48 @@ add_filter('acf/rest_api/key', function ($key, $request, $type) {
     return 'collection';
 }, 10, 3);
 
-function add_to_collect(WP_REST_Request $request_data){
+add_action('rest_api_init', function(){
+    
+    register_rest_route('wp/v2', '/client_collection', array(
+        'methods' => 'GET',
+        'callback' => 'fetch_collection'
+    ));
+    
+    register_rest_route('wp/v2', '/collection/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'fetch_collection'
+    ));
 
+    register_rest_route('wp/v2', '/collection', array(
+        'methods' => 'POST',
+        'callback' => 'post_collection'
+    ));
+
+    register_rest_route('wp/v2', '/add_to_collection', array(
+        'methods' => 'POST',
+        'callback' => 'add_to_collect'
+    ));
+
+    register_rest_route('wp/v2', '/portfolio_collections/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'portfolio_collections'
+    ));
+
+    register_rest_route('wp/v2', '/add_token', array(
+        'methods' => 'POST',
+        'callback' => function( WP_REST_Request $request_data ){
+        }
+    ));
+
+    register_rest_route('wp/v2', 'get_all_tokens', array(
+        'methods' => 'GET',
+        'callback' => 'add_token'
+    ));
+    
+});
+
+
+function add_to_collect(WP_REST_Request $request_data){
     $collection_id = $request_data['collection_id'] ? $request_data['collection_id'] : null;
     $category_name = $request_data['collection_name'] ? $request_data['collection_name'] : null;
     $portfolio_id = $request_data['portfolio_id'] ? $request_data['portfolio_id'] : null;
@@ -247,125 +257,72 @@ function fetch_collection(WP_REST_Request $request){
     return array('status'=>'error','message'=>'Wrong token!');
 }
 
-add_action('rest_api_init', function(){
-    /**
-     * 1 token is equal to a 1 collection
-     * API: collections/v2
-     * Method: GET
-     **/
-    register_rest_route('wp/v2', '/client_collection', array(
-        'methods' => 'GET',
-        'callback' => 'fetch_collection'
-    ));
+function post_collection(WP_REST_Request $request_data){
+    $request_body = json_decode($request_data->get_body());
+    $portfolios = $request_body->bloop_portfolios[0];
     
-    register_rest_route('wp/v2', '/collection/(?P<id>\d+)', array(
-        'methods' => 'GET',
-        'callback' => 'fetch_collection'
-    ));
+    $post_type = "collection";
+    $post_array = array(
+        "post_title" => $request_body->title,
+        "post_type" => $post_type,
+        "post_content" => $request_body->content,
+        "post_status" => $request_body->status ? $request_body->status : "draft",
+    );
 
-    register_rest_route('wp/v2', '/collection', array(
-        'methods' => 'POST',
-        'callback' => function ( WP_REST_Request $request_data ){
-            $request_body = json_decode($request_data->get_body());
-            $portfolios = $request_body->bloop_portfolios[0];
-            
-            $post_type = "collection";
-            $post_array = array(
-                "post_title" => $request_body->title,
-                "post_type" => $post_type,
-                "post_content" => $request_body->content,
-                "post_status" => $request_body->status ? $request_body->status : "draft",
-            );
+    $post_id = wp_insert_post($post_array);
+    $field_key = "field_5d142e312c5e0";
+    $value = array(
+        array(
+            "bloop_collection_portfolio" => $portfolios->bloop_collection_portfolio,
+            "bloop_date_created" => $portfolios->bloop_collection_portfolio,
+            "bloop_shared_to" => $portfolios->shared_id
+        )
+    );
+    update_field( $field_key, $value, $post_id );
+    return $post_id;
+}
 
-            $post_id = wp_insert_post($post_array);
-            $field_key = "field_5d142e312c5e0";
-            $value = array(
-                array(
-                    "bloop_collection_portfolio" => $portfolios->bloop_collection_portfolio,
-                    "bloop_date_created" => $portfolios->bloop_collection_portfolio,
-                    "bloop_shared_to" => $portfolios->shared_id
-                )
-            );
-            update_field( $field_key, $value, $post_id );
-            return $post_id;
+function portfolio_collections(WP_REST_Request $request){
+    global $wpdb;
+    if ( $request['id'] && $request['author'] ){
+        $collections = $wpdb->get_results( 
+            "SELECT post_id 
+            FROM wp_postmeta AS pm 
+            JOIN wp_posts AS p  
+            ON pm.post_id = p.ID
+            WHERE meta_key LIKE 'bloop_portfolios_%_bloop_collection_portfolio' 
+            AND meta_value = ". $request['id'] ." 
+            AND post_type='collection'
+            AND post_status = 'publish'
+            AND post_author = ". $request['author'] ."");    
+        return array('status'=>'success', 'collection_ids'=>$collections);
+    }
 
-        }
-    ));
+    return array('status'=>'error', 'message'=> 'Portfolio and Author IDs required!');
+}
 
-    /**
-     * API: wp/v2/add_to_collection{$id} 
-     * Method: POST
-     * $id = collection id
-     **/
-    register_rest_route('wp/v2', '/add_to_collection', array(
-        'methods' => 'POST',
-        'callback' => 'add_to_collect'
-    ));
-
-    /**
-     * API: wp/v2/portfolio_collections/{$id} 
-     * Method: GET
-     * $id = portfolio id
-     * params: author id
-     **/
-    register_rest_route('wp/v2', '/portfolio_collections/(?P<id>\d+)', array(
-        'methods' => 'GET',
-        'callback' => function(WP_REST_Request $request){
-            global $wpdb;
-
-            if ( $request['id'] && $request['author'] ){
-                $collections = $wpdb->get_results( 
-                    "SELECT post_id 
-                    FROM wp_postmeta AS pm 
-                    JOIN wp_posts AS p  
-                    ON pm.post_id = p.ID
-                    WHERE meta_key LIKE 'bloop_portfolios_%_bloop_collection_portfolio' 
-                    AND meta_value = ". $request['id'] ." 
-                    AND post_type='collection'
-                    AND post_status = 'publish'
-                    AND post_author = ". $request['author'] ."");    
-                return array('status'=>'success', 'collection_ids'=>$collections);
-            }
-
-            return array('status'=>'error', 'message'=> 'Portfolio and Author IDs required!');
-        }
-    ));
-
-    register_rest_route('wp/v2', '/add_token', array(
-        'methods' => 'POST',
-        'callback' => function( WP_REST_Request $request_data ){
-            global $wpdb;
-            $body = json_decode($request_data->get_body());
-            $collection_id = $body->collection_id; // Importante
-            $author = $body->author; // Importante
-            $remarks = $body->collection_name ? $body->collection_name : "N/A";
-            $token_generated = bloop_wof_tokenizer();
-            
-            if (!$collection_id || !$author)
-                return array('status'=>'error', 'message' => 'No collection ID or author!');
-            
-            $tokenized = $wpdb->insert( $wpdb->prefix . "blooptoken", array(
-                "collection_id" => $collection_id,
-                "author" => $author,
-                "remarks" => $remarks,
-                "token_generated" => $token_generated,
-            ));
-
-            if ( $tokenized )
-                return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
-        }
-    ));
-
-    register_rest_route('wp/v2', 'get_all_tokens', array(
-        'methods' => 'GET',
-        'callback' => function( WP_REST_Request $request_data ){
-            global $wpdb;
-            $results = $wpdb->get_results( "SELECT * FROM wp_blooptoken" , OBJECT );
-            return $results;
-        }
-    ));
+function add_token(WP_REST_Request $request_data){
+    global $wpdb;
+    $body = json_decode($request_data->get_body());
+    $collection_id = $body->collection_id; // Importante
+    $author = $body->author; // Importante
+    $remarks = $body->collection_name ? $body->collection_name : "N/A";
+    $token_generated = bloop_wof_tokenizer();
     
-});
+    if (!$collection_id || !$author)
+        return array('status'=>'error', 'message' => 'No collection ID or author!');
+    
+    $tokenized = $wpdb->insert( $wpdb->prefix . "blooptoken", array(
+        "collection_id" => $collection_id,
+        "author" => $author,
+        "remarks" => $remarks,
+        "token_generated" => $token_generated,
+    ));
+
+    if ( $tokenized )
+        return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
+}
+
 
 function bloop_wof_tokenizer(){
     $token = openssl_random_pseudo_bytes(5);
