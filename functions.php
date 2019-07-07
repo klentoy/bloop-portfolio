@@ -190,20 +190,22 @@ add_action('rest_api_init', function(){
 
 
 function add_to_collect(WP_REST_Request $request_data){
-    $action = $request_data['action'] ? $request_data['action'] : null;
-    $collection_id = $request_data['collection_id'] ? $request_data['collection_id'] : null;
-    $category_name = $request_data['collection_name'] ? $request_data['collection_name'] : null;
-    $portfolio_id = $request_data['portfolio_id'] ? $request_data['portfolio_id'] : null;
-    $shared_id = $request_data['shared_id'] ? $request_data['shared_id'] : null;
+    $request_body = json_decode($request_data->get_body());
+    $action = $request_body->action ? $request_body->action : null;
+    $collection_id = $request_body->collection_id ? $request_body->collection_id : null;
+    $category_name = $request_body->collection_name ? $request_body->collection_name : null;
+    $portfolio_id = $request_body->portfolio_id ? $request_body->portfolio_id : null;
+    $shared_id = $request_body->shared_id ? $request_body->shared_id : null;
     
     if ( 'publish' == get_post_status ( $portfolio_id ) || 'private' == get_post_status ( $portfolio_id ) ) {
         $field_key = "bloop_portfolios";
         $value = get_field($field_key, $collection_id);
 
         if ( $action == "remove" ){
-            if ( !array_search($portfolio_id, array_column($value, "bloop_collection_portfolio"))){
+            if ( !(array_search($portfolio_id, array_column($value, "bloop_collection_portfolio")) + 1)){
                 return false;
             }
+
             $portfolio_row_index = array_search($portfolio_id, array_column($value, "bloop_collection_portfolio")) + 1;
             if( delete_row("bloop_portfolios", $portfolio_row_index, $collection_id) ){
                 return array('status'=>'success', 'message'=>'Successfully removed ' . $portfolio_id );
@@ -215,15 +217,16 @@ function add_to_collect(WP_REST_Request $request_data){
             $value[] = array(
                 "bloop_collection_portfolio" => $portfolio_id,
                 "bloop_date_created" => current_time('mysql'),
-                "shared_id" => $shared_id
+                "bloop_shared_to" => $shared_id
             );
             $tempArr = array_unique(array_column($value, 'bloop_collection_portfolio'));
             $new_value = array_intersect_key($value, $tempArr);
             return update_field( $field_key, $new_value, $collection_id );
-        }
+        }            
+
 
     }
-    return false;
+    return $portfolio_id;
 }
 
 function fetch_collection(WP_REST_Request $request){
