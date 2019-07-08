@@ -150,6 +150,11 @@ add_filter('acf/rest_api/key', function ($key, $request, $type) {
 
 add_action('rest_api_init', function(){
     
+    register_rest_route('wp/v2', '/collection', array(
+        'methods' => 'GET',
+        'callback' => 'all_collections'
+    ));
+
     register_rest_route('wp/v2', '/client_collection', array(
         'methods' => 'GET',
         'callback' => 'fetch_collection'
@@ -177,13 +182,12 @@ add_action('rest_api_init', function(){
 
     register_rest_route('wp/v2', '/add_token', array(
         'methods' => 'POST',
-        'callback' => function( WP_REST_Request $request_data ){
-        }
+        'callback' => 'add_token'
     ));
 
     register_rest_route('wp/v2', 'get_all_tokens', array(
         'methods' => 'GET',
-        'callback' => 'add_token'
+        'callback' => 'get_all_token'
     ));
     
 });
@@ -196,11 +200,13 @@ function add_to_collect(WP_REST_Request $request_data){
     $category_name = $request_body->collection_name ? $request_body->collection_name : null;
     $portfolio_id = $request_body->portfolio_id ? $request_body->portfolio_id : null;
     $shared_id = $request_body->shared_id ? $request_body->shared_id : null;
-    
+
     if ( 'publish' == get_post_status ( $portfolio_id ) || 'private' == get_post_status ( $portfolio_id ) ) {
         $field_key = "bloop_portfolios";
         $value = get_field($field_key, $collection_id);
-
+        if ( ! $value ){
+            $value = array();
+        }
         if ( $action == "remove" ){
             if ( !(array_search($portfolio_id, array_column($value, "bloop_collection_portfolio")) + 1)){
                 return false;
@@ -231,7 +237,6 @@ function add_to_collect(WP_REST_Request $request_data){
 
 function fetch_collection(WP_REST_Request $request){
     $authorized = get_current_user_id();
-    
     if ( $request['token'] || $authorized ){
         $token_ids = array();
         $portfolios = array();
@@ -239,7 +244,6 @@ function fetch_collection(WP_REST_Request $request){
         if ( $request['id'] ){
             $tokens = (array) $request['id'];
             foreach( $tokens as $token ){
-                return get_post_meta($token);
                 array_push($portfolios, get_field('bloop_portfolios', $token));
                 array_push($token_ids, $token);
             }
@@ -258,7 +262,7 @@ function fetch_collection(WP_REST_Request $request){
                 'post__in' => $token_ids,
             );
             $collections = get_posts($args);
-            array_push($collections, array("porfolios"=>$portfolios));
+            array_push($collections, array("portfolios"=>$portfolios));
             return array('collection'=>$collections);
         }
     }else{
@@ -300,7 +304,9 @@ function post_collection(WP_REST_Request $request_data){
 
 function portfolio_collections(WP_REST_Request $request){
     global $wpdb;
-    if ( $request['id'] && $request['author'] ){
+    $author_id = $request['author'] ? $request['author'] : get_current_user_id();
+
+    if ( $request['id'] && $author_id  ){
         $collections = $wpdb->get_results( 
             "SELECT post_id 
             FROM wp_postmeta AS pm 
@@ -309,8 +315,9 @@ function portfolio_collections(WP_REST_Request $request){
             WHERE meta_key LIKE 'bloop_portfolios_%_bloop_collection_portfolio' 
             AND meta_value = ". $request['id'] ." 
             AND post_type='collection'
-            AND post_status = 'publish'
-            AND post_author = ". $request['author'] ."");    
+            AND (post_status = 'publish' OR post_status = 'private')
+            AND post_author = $author_id");
+            
         return array('status'=>'success', 'collection_ids'=>$collections);
     }
 
@@ -337,6 +344,30 @@ function add_token(WP_REST_Request $request_data){
 
     if ( $tokenized )
         return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
+}
+
+function get_all_token($token){
+    global $wpdb;
+    if ( $token ){ 
+        return $wpdb->get_results( "SELECT * FROM wp_blooptoken" , OBJECT );
+    }
+    return false;
+}
+
+function all_collections( WP_REST_Request $request ){
+    global $wpdb;
+    $collections_str = "
+        SELECT $wpdb->posts.* 
+        FROM $wpdb->posts
+        WHERE ($wpdb->posts.post_status = 'publish' OR $wpdb->posts.post_status = 'private')
+        AND $wpdb->posts.post_type = 'collection'
+        AND $wpdb->posts.post_date < NOW()
+        ORDER BY $wpdb->posts.post_date DESC";
+    if( $collections = $wpdb->get_results($collections_str, OBJECT) ){
+        return array('status'=>'success', 'collections'=>$collections);
+    }else{
+        return array('status'=>'error', 'message'=>"No Collections!");
+    }
 }
 
 
