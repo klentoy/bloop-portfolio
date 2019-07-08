@@ -112,24 +112,24 @@ function prepare_rest_proj($data, $post, $request)
 add_filter('rest_prepare_portfolio', 'prepare_rest_proj', 10, 3);
 
 
-function prepare_rest_collection($data, $post, $request)
-{
-    $_data = $data->data;
+// function prepare_rest_collection($data, $post, $request)
+// {
+//     $_data = $data->data;
 
-    //get featured image
-    $portfolio_collection = get_field( 'bloop_portfolios', $post->ID);
-    $portfolio_ids = [];
+//     //get featured image
+//     $portfolio_collection = get_field( 'bloop_portfolios', $post->ID);
+//     $portfolio_ids = [];
 
-    foreach ($portfolio_collection as $val) {
-        array_push( $portfolio_ids, $val['bloop_collection_portfolio']);
-    }
-    $_data['portfolios'] = $portfolio_ids;
+//     foreach ($portfolio_collection as $val) {
+//         array_push( $portfolio_ids, $val['bloop_collection_portfolio']);
+//     }
+//     $_data['portfolios'] = $portfolio_ids;
 
-    $data->data = $_data;
+//     $data->data = $_data;
 
-    return $data;
-}
-add_filter('rest_prepare_collection', 'prepare_rest_collection', 10, 3);
+//     return $data;
+// }
+// add_filter('rest_prepare_collection', 'prepare_rest_collection', 10, 3);
 
 //add featured image to collection post type
 add_theme_support( 'post-thumbnails' );
@@ -356,12 +356,14 @@ function get_all_token($token){
 
 function all_collections( WP_REST_Request $request ){
     global $wpdb;
+    $author_id = $request['author'] ? $request['author'] : get_current_user_id();
     $collections_str = "
         SELECT $wpdb->posts.* 
         FROM $wpdb->posts
         WHERE ($wpdb->posts.post_status = 'publish' OR $wpdb->posts.post_status = 'private')
         AND $wpdb->posts.post_type = 'collection'
         AND $wpdb->posts.post_date < NOW()
+        AND $wpdb->posts.post_author = $author_id
         ORDER BY $wpdb->posts.post_date DESC";
     if( $collections = $wpdb->get_results($collections_str, OBJECT) ){
         return array('status'=>'success', 'collections'=>$collections);
