@@ -35,7 +35,7 @@ function custom_post_type() {
 		'label'                 => __( 'Portfolio', 'text_domain' ),
 		'description'           => __( 'Portfolio for Bloop', 'text_domain' ),
 		'labels'                => $labels,
-		'supports'              => array( 'title', 'editor' ),
+		'supports'              => array( 'title', 'editor', 'thumbnail' ),
 		'taxonomies'            => array( 'product_type' ),
 		'hierarchical'          => false,
 		'public'                => true,
