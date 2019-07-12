@@ -11,6 +11,7 @@ include '_customs/tax_product_type.php';
 include '_customs/tax_categories.php';
 include '_customs/tax_tags.php';
 include '_customs/tax_color.php';
+include '_customs/user_roles.php';
 
 add_filter('register_taxonomy_args', 'custom_taxonomies', 10, 2);
 function custom_taxonomies($args, $taxonomy_name)
@@ -189,9 +190,71 @@ add_action('rest_api_init', function(){
         'methods' => 'GET',
         'callback' => 'get_all_token'
     ));
+
+    register_rest_route('wp/v2', '/portfolio/(?P<id>\d+)', array(
+        'menthods' => 'GET',
+        'callback' => 'fetch_portfolio'
+    ));
+
+    register_rest_route('wp/v2', '/portfolio', array(
+        'menthods' => 'GET',
+        'callback' => 'fetch_portfolio'
+    ));
+
+    register_rest_route('wp/v2', '/users', array(
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => 'get_user_list',
+        'show_in_rest' => true
+    ));
+
+    register_rest_route('wp/v2', '/share_collection', array(
+        'methods'             => WP_REST_Server::CREATABLE,
+        'callback'            => 'share_collection'
+    ));
     
 });
 
+function share_collection (WP_REST_Request $request) {
+    if ( $authorized = get_current_user_id() ) {
+        $body = json_decode($request->get_body());
+        if ( get_userdata($body->user_id) === false )
+            return false;
+        $user_email = get_userdata($body->user_id)->user_email;
+        $user_fullname = get_user_meta($body->user_id,'first_name', true) . ' ' . get_user_meta($body->user_id, 'last_name', true);
+        $collection_name = get_the_title($body->collection_id);
+
+        $sharer_name = get_user_meta($authorized,'first_name', true) . ' ' . get_user_meta($authorized, 'last_name', true);
+        
+        $e_t = "Hi $user_fullname, $sharer_name shared this collection: ";
+        $e_t .= "<a href='" . get_bloginfo('url'). "/collection/". $body->collection_id ."' target='_blank'>$collection_name</a> <br/>";
+        $e_t .= "Full Link <a href='" . get_bloginfo('url'). "/collection/". $body->collection_id ."' target='_blank'>" . get_bloginfo('url'). "/collection/". $body->collection_id ."</a>";
+        
+        $headers = 'From: '. get_bloginfo('admin_email') . "\r\n" .
+            'Reply-To: ' . get_bloginfo('admin_email') . "\r\n".
+            'Content-Type: text/html; charset=UTF-8' . "\r\n";
+        
+        wp_mail( $user_email, "Collection Shared by $sharer_name", $e_t, $headers );
+        
+        return array('status'=>'email sent!');
+    }
+    return false;
+}
+
+function get_user_list($request) {
+    $role = $request['role'] ? array('role'=>'developer') : '';
+    $results = get_users($role);
+    $users = array();
+    $controller = new WP_REST_Users_Controller();
+    foreach ( $results as $key => $user ) {
+         $data    = $controller->prepare_item_for_response( $user, $request );
+         $users[] = $controller->prepare_response_for_collection( $data );
+         $users[$key]['first_name'] = get_user_meta($user->ID, 'first_name', true);
+         $users[$key]['last_name'] = get_user_meta($user->ID, 'last_name', true);
+         $users[$key]['email'] = get_userdata($user->ID)->user_email;
+     }
+ 
+    return rest_ensure_response( $users );
+ }
 
 function add_to_collect(WP_REST_Request $request_data){
     $request_body = json_decode($request_data->get_body());
@@ -352,6 +415,30 @@ function get_all_token($token){
         return $wpdb->get_results( "SELECT * FROM wp_blooptoken" , OBJECT );
     }
     return false;
+}
+
+
+function fetch_portfolio(WP_REST_Request $request){
+    if ( $id = $request['id'] ){
+        $args = array(
+            'post_type'=>'portfolio',
+            'post__in' => array($id),
+            'post_status' => 'private' );
+        if ( $token = get_tokens ( $request["token"] ) ){
+            $portf = (array) get_post($args);
+            return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
+        }else if ( get_current_user_id() ){
+            $portf = (array) get_post($args);
+            return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
+        }else{
+            return array('status'=>'error', 'message' => 'No Token or unauthorized!');
+        }
+    }else{
+        return get_posts(array(
+            'post_type'   => 'portfolio',
+            'post_status' => 'private'
+        ));
+    }
 }
 
 function all_collections( WP_REST_Request $request ){
