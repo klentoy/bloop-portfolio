@@ -241,7 +241,7 @@ function share_collection (WP_REST_Request $request) {
 }
 
 function get_user_list($request) {
-    $role = $request['role'] ? array('role'=>'developer') : '';
+    $role = $request['role'] ? array('role'=>$request['role']) : '';
     $results = get_users($role);
     $users = array();
     $controller = new WP_REST_Users_Controller();
@@ -462,7 +462,7 @@ function add_token(WP_REST_Request $request_data){
     ));
 
     if ( $tokenized )
-        return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id);
+        return array('status'=>'success', 'token_id'=>$tokenized, 'collection_id'=>$collection_id,"token_generated" => $token_generated);
 }
 
 function get_all_token($token){
