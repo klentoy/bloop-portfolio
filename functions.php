@@ -302,31 +302,87 @@ function fetch_collection(WP_REST_Request $request){
     $authorized = get_current_user_id();
     if ( $request['token'] || $authorized ){
         $token_ids = array();
-        $portfolios = array();
+        $collection_items = array();
+        $collection = array();
 
         if ( $request['id'] ){
             $tokens = (array) $request['id'];
             foreach( $tokens as $token ){
-                array_push($portfolios, get_field('bloop_portfolios', $token));
+                $fields = get_field('bloop_portfolios', $token);
+                array_push($collection_items, $fields);
+                foreach( $collection_items[0] as $portfolio ){
+                    array_push($collection, $portfolio['bloop_collection_portfolio']);
+                }
                 array_push($token_ids, $token);
             }
         }else if ( get_tokens($request['token']) ){
             $tokens = get_tokens($request['token']);
             foreach( $tokens as $token ){
-                array_push($portfolios, get_field('bloop_portfolios', $token->collection_id));
+                array_push($collection_items, get_field('bloop_portfolios', $token->collection_id));
+                foreach( $collection_items[0] as $portfolio ){
+                    array_push($collection, $portfolio['bloop_collection_portfolio']);
+                }                
                 array_push($token_ids, $token->collection_id);
             }
         }
+
+        $args = array(
+            'post_type'   => 'collection',
+            'post__in' => $token_ids
+        );
+        $collection_info = get_posts($args);
         
-        if ( $token_ids ){
+        if ( $fields ){
             $args = array(
-                'post_type'   => 'collection',
-                'post_status' => 'private',
-                'post__in' => $token_ids,
+                'post_type'   => 'portfolio',
+                'post__in' => $collection,
             );
-            $collections = get_posts($args);
-            array_push($collections, array("portfolios"=>$portfolios));
-            return array('collection'=>$collections);
+            $portfolios = get_posts($args);
+            //adds acf data to portfolios object
+            foreach( $portfolios as $portfolio ){
+                $slug = get_post_field( 'post_name', $portfolio->ID );
+                $web_url = get_field( 'website_url', $portfolio->ID );
+                $desktop_thumbnail = get_field( 'desktop_thumbnail', $portfolio->ID );
+                $mobile_thumbnail = get_field( 'mobile_thumbnail', $portfolio->ID );
+                $project_thumbnail = get_the_post_thumbnail_url( $portfolio->ID,'full');
+
+                $web_screenshots = get_field( 'website_screenshots', $portfolio->ID );
+                $screenshots = [];
+                if (is_array($web_screenshots) || is_object($web_screenshots)) {
+                    foreach ($web_screenshots as $screenshot) {
+                        array_push($screenshots, $screenshot['sizes']['large']);
+                    }
+                }
+
+                $product_type = get_the_terms( $portfolio->ID, 'product_type' );
+                $colors = get_the_terms( $portfolio->ID, 'portfolio_colors' );
+                $cats = get_the_terms( $portfolio->ID, 'portfolio_categories' );
+                $tags = get_the_terms( $portfolio->ID, 'portfolio_tags' );
+ 
+                $proj_meta = [$product_type, $cats, $tags];
+                $proj_tags = [];
+                foreach ($proj_meta as $meta) {
+                    if (is_array($meta) || is_object($meta)) {
+                        foreach ($meta as $val) {
+                            array_push($proj_tags, $val->name);
+                        }
+                    }
+                }
+
+                $portfolio->slug = $slug;  
+                $portfolio->web_url = $web_url;
+                $portfolio->desktop_thumbnail = $desktop_thumbnail['sizes']['large'];
+                $portfolio->mobile_thumbnail = $mobile_thumbnail['sizes']['large'];
+                $portfolio->screenshots = $screenshots;       
+                $portfolio->prod_type = $product_type;
+                $portfolio->colors = $colors;
+                $portfolio->proj_tags = $proj_tags;  
+                $portfolio->project_thumbnail = $project_thumbnail;
+            }            
+            //array_push($portfolios, array("portfolios"=>$portfolios));
+            return array('collection'=>$collection_info[0], 'portfolios'=>$portfolios);
+        } else {
+            return array('collection'=>$collection_info[0], 'portfolios'=> []);
         }
     }else{
         if ( ! $authorized ){
@@ -510,3 +566,10 @@ function remove_element_by_value($arr, $val) {
     }
     return $return;
  }
+
+function remove_menu_items() {
+    if( !current_user_can( 'administrator' ) ):
+        remove_menu_page( 'edit.php?post_type=collection' );
+    endif;
+}
+add_action( 'admin_menu', 'remove_menu_items' );
