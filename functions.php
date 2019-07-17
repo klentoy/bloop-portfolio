@@ -211,6 +211,44 @@ add_action('rest_api_init', function(){
         'methods'             => WP_REST_Server::CREATABLE,
         'callback'            => 'share_collection'
     ));
+
+    register_rest_route('wp/v2', '/search_any', array(
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => function(WP_REST_Request $request){
+            $search_text = $request['s'];
+            global $wpdb;    
+            $porfolio_ids = "";
+            $post = $wpdb->get_results("SELECT p.* 
+                                        FROM $wpdb->posts AS p
+                                        LEFT JOIN $wpdb->term_relationships AS tr ON ('p.ID' = tr.object_id)
+                                        LEFT JOIN $wpdb->term_taxonomy AS tt ON (tr.term_taxonomy_id = tt.term_taxonomy_id)
+                                        LEFT JOIN $wpdb->terms AS t ON (t.term_id = tt.term_id)
+                                        WHERE p.post_type = 'portfolio'
+                                        AND p.post_name LIKE '%$search_text%'
+                                        GROUP BY p.ID
+                                        ORDER BY p.post_date DESC");
+                                        
+            $porfolio_ids = array_map(function($p){ return $p->ID; }, $post);
+            if ( $porfolio_ids ){
+                $porfolio_ids = " AND p.ID NOT IN (" . implode(", ",$porfolio_ids) . ")";
+            }
+            $tax = $wpdb->get_results("SELECT *
+                                        FROM $wpdb->terms AS t
+                                        INNER JOIN $wpdb->term_relationships AS tr ON (tr.term_taxonomy_id = t.term_id)
+                                        LEFT JOIN $wpdb->posts AS p ON (p.ID = tr.object_id)
+                                        LEFT JOIN $wpdb->term_taxonomy AS tt ON (tt.term_id = t.term_id)
+                                        WHERE t.name LIKE '%$search_text%' $porfolio_ids") ;
+                                        
+            if( $portfolio_results = array_unique(array_merge($post, $tax), SORT_REGULAR) ){
+                return array(
+                    "count_status" => array(
+                        "portfolios" => count($portfolio_results)
+                    ), 
+                    "portfolios" => $portfolio_results);
+            }
+            return false;
+        }
+    ));
     
 });
 
