@@ -145,6 +145,14 @@ function get_tokens($token)
     return false;
 }
 
+function check_token(WP_REST_Request $request){
+    $tokens = get_tokens($request['token']);
+    if($tokens){
+        return true;
+    }
+    return false;
+}
+
 add_filter('acf/rest_api/key', function ($key, $request, $type) {
     return 'collection';
 }, 10, 3);
@@ -199,6 +207,11 @@ add_action('rest_api_init', function(){
     register_rest_route('wp/v2', '/portfolio', array(
         'menthods' => 'GET',
         'callback' => 'fetch_portfolio'
+    ));
+
+    register_rest_route('wp/v2', '/check_token', array(
+        'menthods' => 'GET',
+        'callback' => 'check_token'
     ));
 
     register_rest_route('wp/v2', '/users', array(
@@ -558,6 +571,7 @@ function bloop_wof_tokenizer(){
     $token = openssl_random_pseudo_bytes(5);
     $token = bin2hex($token);
     $token = crypt($token, '$6$'. crypt($token) .'$'. time() .'$');
+    $token = str_replace('/', '', $token);
     return $token;
 }
 
