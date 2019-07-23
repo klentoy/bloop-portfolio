@@ -255,19 +255,33 @@ function share_collection(WP_REST_Request $request)
             return false;
         $user_email = get_userdata($body->user_id)->user_email;
         $user_fullname = get_user_meta($body->user_id, 'first_name', true) . ' ' . get_user_meta($body->user_id, 'last_name', true);
-        $collection_name = get_the_title($body->collection_id);
+        $post_name = get_the_title($body->post_id);
+        $post_slug =  get_post_field( 'post_name', $body->post_id );
 
         $sharer_name = get_user_meta($authorized, 'first_name', true) . ' ' . get_user_meta($authorized, 'last_name', true);
+        $share_type = $body->type;
 
-        $e_t = "Hi $user_fullname, $sharer_name shared this collection: ";
-        $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->collection_id . "' target='_blank'>$collection_name</a> <br/>";
-        $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->collection_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->collection_id . "</a>";
+        if($share_type == 'collection'){
+            $e_t = "Hi $user_fullname, $sharer_name shared this collection: ";
+            $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
+            $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->post_id . "</a>";
+        } else if($share_type == 'portfolio') {
+            $e_t = "Hi $user_fullname, $sharer_name shared this website: ";
+            $e_t .= "<a href='" . get_bloginfo('url') . "/portfolio/" . $post_slug . "' target='_blank'>$post_name</a> <br/>";
+            $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/portfolio/" . $post_slug . "' target='_blank'>" . get_bloginfo('url') . "/portfolio/" . $post_slug . "</a>";
+        } else {
+            return array('status' => 'error', 'message' => 'Invalid share type!');
+        }
 
         $headers = 'From: ' . get_bloginfo('admin_email') . "\r\n" .
             'Reply-To: ' . get_bloginfo('admin_email') . "\r\n" .
             'Content-Type: text/html; charset=UTF-8' . "\r\n";
 
-        wp_mail($user_email, "Collection Shared by $sharer_name", $e_t, $headers);
+        if($share_type == 'collection'){
+            wp_mail($user_email, "Collection Shared by $sharer_name", $e_t, $headers);
+        } else if($share_type == 'portfolio') {
+            wp_mail($user_email, "Website Shared by $sharer_name", $e_t, $headers);
+        }
 
         return array('status' => 'email sent!');
     }
