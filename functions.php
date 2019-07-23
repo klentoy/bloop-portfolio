@@ -345,7 +345,7 @@ function fetch_collection(WP_REST_Request $request)
             foreach ($tokens as $token) {
                 $fields = get_field('bloop_portfolios', $token);
                 array_push($collection_items, $fields);
-                foreach ($collection_items[0] as $portfolio) {
+                foreach ($collection_items as $portfolio) {
                     array_push($collection, $portfolio['bloop_collection_portfolio']);
                 }
                 array_push($token_ids, $token);
@@ -354,7 +354,7 @@ function fetch_collection(WP_REST_Request $request)
             $tokens = get_tokens($request['token']);
             foreach ($tokens as $token) {
                 array_push($collection_items, get_field('bloop_portfolios', $token->collection_id));
-                foreach ($collection_items[0] as $portfolio) {
+                foreach ($collection_items as $portfolio) {
                     array_push($collection, $portfolio['bloop_collection_portfolio']);
                 }
                 array_push($token_ids, $token->collection_id);
