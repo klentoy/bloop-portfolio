@@ -7,10 +7,12 @@ $table_name = $wpdb->prefix . 'url_shortener';
 
 $sql = "CREATE TABLE $table_name (
   id mediumint(9) NOT NULL AUTO_INCREMENT,
-  time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-  name tinytext NOT NULL,
-  text text NOT NULL,
-  url varchar(55) DEFAULT '' NOT NULL,
+  project_id mediumint(9) NOT NULL,
+  token_generated longtext,
+  remarks longtext,
+  author mediumint(9) NOT NULL,
+  type tinytext NOT NULL,
+  create_date datetime
   PRIMARY KEY  (id)
 ) $charset_collate;";
 

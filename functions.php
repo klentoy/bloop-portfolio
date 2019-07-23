@@ -5,6 +5,8 @@
 # custom field is not available
 include '_customs/acf_exported_fields.php';
 
+include '_customs/custom_tables.php';
+
 include '_customs/post_type_portfolio.php';
 include '_customs/post_type_collection.php';
 include '_customs/tax_product_type.php';
@@ -138,8 +140,12 @@ add_theme_support('post-thumbnails');
 function get_tokens($token)
 {
     global $wpdb;
+    
     if ($token) {
-        $results = $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE token_generated = '{$token}'", OBJECT);
+        $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "blooptoken WHERE token_generated = '{$token}'", OBJECT);
+        if ( ! $results ){
+            $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "portfoliotoken WHERE token_generated = '{$token}'", OBJECT);
+        }
         return $results;
     }
     return false;
@@ -193,6 +199,11 @@ add_action('rest_api_init', function () {
         'methods' => 'POST',
         'callback' => 'add_token'
     ));
+    
+    register_rest_route('wp/v2', '/add_project_token', array( // SINGLE PROJECT. e.g. single portfolio, etc...
+        'methods' => 'POST',
+        'callback' => 'add_project_token'
+    ));
 
     register_rest_route('wp/v2', 'get_all_tokens', array(
         'methods' => 'GET',
@@ -227,43 +238,12 @@ add_action('rest_api_init', function () {
 
     register_rest_route('wp/v2', '/search_any', array(
         'methods'             => WP_REST_Server::READABLE,
-        'callback'            => function (WP_REST_Request $request) {
-            $search_text = $request['s'];
-            global $wpdb;
-            $porfolio_ids = "";
-            $post = $wpdb->get_results("SELECT p.* 
-                                        FROM $wpdb->posts AS p
-                                        LEFT JOIN $wpdb->term_relationships AS tr ON ('p.ID' = tr.object_id)
-                                        LEFT JOIN $wpdb->term_taxonomy AS tt ON (tr.term_taxonomy_id = tt.term_taxonomy_id)
-                                        LEFT JOIN $wpdb->terms AS t ON (t.term_id = tt.term_id)
-                                        WHERE p.post_type = 'portfolio'
-                                        AND p.post_name LIKE '%$search_text%'
-                                        GROUP BY p.ID
-                                        ORDER BY p.post_date DESC");
+        'callback'            => 'search_any'
+    ));
 
-            $porfolio_ids = array_map(function ($p) {
-                return $p->ID;
-            }, $post);
-            if ($porfolio_ids) {
-                $porfolio_ids = " AND p.ID NOT IN (" . implode(", ", $porfolio_ids) . ")";
-            }
-            $tax = $wpdb->get_results("SELECT *
-                                        FROM $wpdb->terms AS t
-                                        INNER JOIN $wpdb->term_relationships AS tr ON (tr.term_taxonomy_id = t.term_id)
-                                        LEFT JOIN $wpdb->posts AS p ON (p.ID = tr.object_id)
-                                        LEFT JOIN $wpdb->term_taxonomy AS tt ON (tt.term_id = t.term_id)
-                                        WHERE t.name LIKE '%$search_text%' $porfolio_ids");
-
-            if ($portfolio_results = array_unique(array_merge($post, $tax), SORT_REGULAR)) {
-                return array(
-                    "count_status" => array(
-                        "portfolios" => count($portfolio_results)
-                    ),
-                    "portfolios" => $portfolio_results
-                );
-            }
-            return false;
-        }
+    register_rest_route('wp/v2', '/my_shared_portfolios', array(
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => 'my_shared_portfolios'
     ));
 });
 
@@ -524,6 +504,32 @@ function add_token(WP_REST_Request $request_data)
         return array('status' => 'success', 'token_id' => $tokenized, 'collection_id' => $collection_id, "token_generated" => $token_generated);
 }
 
+function add_project_token(WP_REST_Request $request_data)
+{
+    global $wpdb;
+    $body = json_decode($request_data->get_body());
+    $project_id = $body->project_id; // Importante
+    $author = $body->author; // Importante
+    $type = $body->type ? str_replace(' ', '-', strtolower($body->type)) : "N/A"; 
+    $remarks = $body->remarks ? $body->remarks : "N/A";
+    $token_generated = bloop_wof_tokenizer();
+    
+    if (!$project_id || !$author)
+        return array('status' => 'error', 'message' => 'No Project ID or author!');
+
+    $tokenized = $wpdb->insert($wpdb->prefix . "portfoliotoken", array(
+        "project_id" => $project_id,
+        "author" => $author,
+        "remarks" => $remarks,
+        "token_generated" => $token_generated,
+        "type" => $type,
+        "created_at" => date("Y-m-d H:i:s")
+    ));
+
+    if ($tokenized)
+        return array('status' => 'success', 'token_id' => $tokenized, 'collection_id' => $collection_id, "token_generated" => $token_generated);
+}
+
 function get_all_token($token)
 {
     global $wpdb;
@@ -535,17 +541,29 @@ function get_all_token($token)
 
 function fetch_portfolio(WP_REST_Request $request)
 {
+    $type = isset($_GET['type']) ? $_GET['type'] : '';
+
     if ($id = $request['id']) {
         $args = array(
             'post_type' => 'portfolio',
-            'post__in' => array($id),
+            'post_id' => $id,
             'post_status' => 'private'
         );
         if ($token = get_tokens($request["token"])) {
-            $portf = (array) get_post($args);
-            return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
+            $project_id = $token[0]->project_id ? $token[0]->project_id : '';
+            $collection_id = $token[0]->collection_id ? $token[0]->collection_id : '';
+            if ( $project_id == $id ){
+                $portf = (array) get_post($id);
+                return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
+            }
+            $collection = get_field('bloop_portfolios', $collection_id);
+            if ( $porfolio_id = portfolio_search($id, $collection) ){
+                $portf = (array) get_post($porfolio_id);
+                return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
+            }
+
         } else if (get_current_user_id()) {
-            $portf = (array) get_post($args);
+            $portf = (array) get_post($id);
             return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
         } else {
             return array('status' => 'error', 'message' => 'No Token or unauthorized!');
@@ -557,6 +575,15 @@ function fetch_portfolio(WP_REST_Request $request)
         ));
     }
 }
+
+function portfolio_search($id, $array) {
+    foreach ($array as $key => $val) {
+        if ($val['bloop_collection_portfolio'] == $id) {
+            return $id;
+        }
+    }
+    return null;
+ }
 
 function all_collections(WP_REST_Request $request)
 {
@@ -577,12 +604,64 @@ function all_collections(WP_REST_Request $request)
     }
 }
 
+function search_any(WP_REST_Request $request) {
+    $search_text = $request['s'];
+    global $wpdb;
+    $porfolio_ids = "";
+    $post = $wpdb->get_results("SELECT p.* 
+                                FROM $wpdb->posts AS p
+                                LEFT JOIN $wpdb->term_relationships AS tr ON ('p.ID' = tr.object_id)
+                                LEFT JOIN $wpdb->term_taxonomy AS tt ON (tr.term_taxonomy_id = tt.term_taxonomy_id)
+                                LEFT JOIN $wpdb->terms AS t ON (t.term_id = tt.term_id)
+                                WHERE p.post_type = 'portfolio'
+                                AND p.post_name LIKE '%$search_text%'
+                                GROUP BY p.ID
+                                ORDER BY p.post_date DESC");
+
+    $porfolio_ids = array_map(function ($p) {
+        return $p->ID;
+    }, $post);
+    if ($porfolio_ids) {
+        $porfolio_ids = " AND p.ID NOT IN (" . implode(", ", $porfolio_ids) . ")";
+    }
+    $tax = $wpdb->get_results("SELECT *
+                                FROM $wpdb->terms AS t
+                                INNER JOIN $wpdb->term_relationships AS tr ON (tr.term_taxonomy_id = t.term_id)
+                                LEFT JOIN $wpdb->posts AS p ON (p.ID = tr.object_id)
+                                LEFT JOIN $wpdb->term_taxonomy AS tt ON (tt.term_id = t.term_id)
+                                WHERE t.name LIKE '%$search_text%' $porfolio_ids");
+
+    if ($portfolio_results = array_unique(array_merge($post, $tax), SORT_REGULAR)) {
+        return array(
+            "count_status" => array(
+                "portfolios" => count($portfolio_results)
+            ),
+            "portfolios" => $portfolio_results
+        );
+    }
+    return false;
+}
+
+function my_shared_portfolios(){
+    if ( $author_id  = get_current_user_id() ){
+        global $wpdb;
+        if ($author_id) {
+            if ( ! $result = $wpdb->get_results("SELECT * FROM ". $wpdb->prefix."portfoliotoken WHERE author = '$author_id'", OBJECT) ){
+                $result = array('status' => 'error', 'message' => 'No shared portfolios found!');
+            }
+            return $result;
+        }
+    }else{
+        return array('status' => 'error', 'message' => 'User not authorized!');
+    }
+    return false;
+}
 
 function bloop_wof_tokenizer()
 {
     $token = openssl_random_pseudo_bytes(5);
     $token = bin2hex($token);
-    $token = crypt($token, '$6$'. crypt($token) .'$'. time() .'$');
+    $token = crypt(time(), $token);
     $token = str_replace('/', '', $token);
     return $token;
 }
