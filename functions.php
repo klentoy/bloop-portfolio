@@ -142,9 +142,9 @@ function get_tokens($token)
     global $wpdb;
     
     if ($token) {
-        $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "blooptoken WHERE token_generated = '{$token}'", OBJECT);
+        $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "blooptoken WHERE token_generated = '{$token}' AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW()", OBJECT);
         if ( ! $results ){
-            $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "portfoliotoken WHERE token_generated = '{$token}'", OBJECT);
+            $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "portfoliotoken WHERE token_generated = '{$token}' AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW()", OBJECT);
         }
         return $results;
     }
@@ -158,7 +158,7 @@ function check_token(WP_REST_Request $request){
         $created_at = strtotime('+30 days',strtotime($tokens[0]->created_at));
         $diff =  $created_at - $now;
         $date_diff = round($diff / (60 * 60 * 24));
-        return array('status'=> true, 'date_diff' => $date_diff);
+        return array('status'=> true, 'date_diff' => $date_diff, 'tokens'=>$tokens);
     }
     return false;
 }
