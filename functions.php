@@ -154,7 +154,11 @@ function get_tokens($token)
 function check_token(WP_REST_Request $request){
     $tokens = get_tokens($request['token']);
     if($tokens){
-        return true;
+        $now = strtotime(date("Y-m-d H:i:s"));
+        $created_at = strtotime('+30 days',strtotime($tokens[0]->created_at));
+        $diff =  $created_at - $now;
+        $date_diff = round($diff / (60 * 60 * 24));
+        return array('status'=> true, 'date_diff' => $date_diff);
     }
     return false;
 }
