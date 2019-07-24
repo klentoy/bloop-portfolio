@@ -158,7 +158,7 @@ function check_token(WP_REST_Request $request){
         $created_at = strtotime('+30 days',strtotime($tokens[0]->created_at));
         $diff =  $created_at - $now;
         $date_diff = round($diff / (60 * 60 * 24));
-        return array('status'=> true, 'date_diff' => $date_diff, 'tokens'=>$tokens);
+        return array('status'=> true, 'date_diff' => $date_diff);
     }
     return false;
 }
@@ -545,7 +545,9 @@ function add_project_token(WP_REST_Request $request_data)
     ));
 
     if ($tokenized)
-        return array('status' => 'success', 'token_id' => $tokenized, 'collection_id' => $collection_id, "token_generated" => $token_generated);
+        return array('status' => 'success', 'token_id' => $wpdb->insert_id, 'project_id' => $project_id, "token_generated" => $token_generated);
+    else 
+    return false;
 }
 
 function get_all_token($token)
