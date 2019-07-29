@@ -154,11 +154,7 @@ function get_tokens($token)
 function check_token(WP_REST_Request $request){
     $tokens = get_tokens($request['token']);
     if($tokens){
-        $now = strtotime(date("Y-m-d H:i:s"));
-        $created_at = strtotime('+30 days',strtotime($tokens[0]->created_at));
-        $diff =  $created_at - $now;
-        $date_diff = round($diff / (60 * 60 * 24));
-        return array('status'=> true, 'date_diff' => $date_diff);
+        return array('status'=> true, 'created_at' => $tokens[0]->created_at);
     }
     return false;
 }
@@ -214,9 +210,9 @@ add_action('rest_api_init', function () {
         'callback' => 'get_all_token'
     ));
 
-    register_rest_route('wp/v2', 'get_collection_tokens/(?P<id>\d+)', array(
+    register_rest_route('wp/v2', 'get_post_tokens/(?P<id>\d+)', array(
         'methods' => 'GET',
-        'callback' => 'get_collection_tokens'
+        'callback' => 'get_post_tokens'
     ));
 
     register_rest_route('wp/v2', '/portfolio/(?P<id>\d+)', array(
@@ -563,12 +559,19 @@ function get_all_token($token)
     return false;
 }
 
-function get_collection_tokens(WP_REST_Request $request)
+function get_post_tokens(WP_REST_Request $request)
 {
     global $wpdb;
     $author_id = get_current_user_id();
+    $post_type = $request['post_type'];
     if ($id = $request['id']) {
-        return $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE collection_id = $id and author = $author_id", OBJECT);
+
+        if($post_type == 'collection'){
+            return $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE collection_id = $id and author = $author_id AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
+        } else if ($post_type == 'portfolio'){
+            return $wpdb->get_results("SELECT * FROM wp_portfoliotoken WHERE project_id = $id and author = $author_id AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
+        }
+        
     }
     return false;
 }
