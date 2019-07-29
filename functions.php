@@ -46,10 +46,13 @@ function custom_taxonomies($args, $taxonomy_name)
     return $args;
 }
 
-
 function prepare_rest($data, $post, $request)
 {
     $_data = $data->data;
+
+
+
+
 
     $cats = get_the_category($post->ID);
     $_data['cats'] = $cats;
@@ -783,21 +786,3 @@ function remove_menu_items()
     endif;
 }
 add_action('admin_menu', 'remove_menu_items');
-
-
-add_action('init', function () {
-    add_rewrite_tag( '%collection%', '([^/]+)' );
-    add_rewrite_rule( '^collection/([^/]*)/mtype/([^/]*)/?', 'index.php?collectioertn=$matches[1]', 'top' );
-});
-
-add_action('template_redirect', function () {
-    global $wp_query;
-
-    $model = $wp_query->get('collection');
-    print_r($model);
-
-    if (!empty($model)) {
-        // wp_redirect(home_url('wewe/' . $model ));
-        // wp_die;
-    }
-});
