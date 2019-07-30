@@ -154,6 +154,22 @@ function get_tokens($token)
     return false;
 }
 
+function remove_token(WP_REST_Request $request)
+{
+    global $wpdb;
+    $bt_id = $request['bt_id'];
+    $post_type = $request['post_type'];
+    if ($bt_id) {
+        if($post_type == 'collection'){
+            $results = $wpdb->get_results("DELETE FROM " . $wpdb->prefix . "blooptoken WHERE bt_id = '{$bt_id}'", OBJECT);
+        } else if($post_type == 'portfolio') {
+            $results = $wpdb->get_results("DELETE FROM " . $wpdb->prefix . "portfoliotoken WHERE bt_id = '{$bt_id}'", OBJECT);
+        }
+        return array('status' => 'succes', 'message' => 'Successfully removed ' . $bt_id);
+    }
+    return $bt_id;    
+}
+
 function check_token(WP_REST_Request $request){
     $tokens = get_tokens($request['token']);
     if($tokens){
@@ -201,6 +217,11 @@ add_action('rest_api_init', function () {
     register_rest_route('wp/v2', '/add_token', array(
         'methods' => 'POST',
         'callback' => 'add_token'
+    ));
+
+    register_rest_route('wp/v2', '/remove_token', array(
+        'methods' => 'POST',
+        'callback' => 'remove_token'
     ));
     
     register_rest_route('wp/v2', '/add_project_token', array( // SINGLE PROJECT. e.g. single portfolio, etc...
@@ -712,10 +733,22 @@ function my_shared_portfolios(){
     if ( $author_id  = get_current_user_id() ){
         global $wpdb;
         if ($author_id) {
-            if ( ! $result = $wpdb->get_results("SELECT * FROM ". $wpdb->prefix."portfoliotoken WHERE author = '$author_id'", OBJECT) ){
-                $result = array('status' => 'error', 'message' => 'No shared portfolios found!');
+            if ( ! $projects = $wpdb->get_results("SELECT DISTINCT project_id FROM ". $wpdb->prefix."portfoliotoken WHERE author = '$author_id' ORDER BY created_at DESC", OBJECT) ){
+                $projects = array('status' => 'error', 'message' => 'No shared portfolios found!');
             }
-            return $result;
+            
+            $project_ids = array();
+            foreach ($projects as $project) {
+                array_push($project_ids, $project->project_id);
+            }
+
+            $args = array(
+                'post_type'   => 'portfolio',
+                'post__in' => $project_ids,
+            );
+            $portfolios = get_posts($args);            
+
+            return $portfolios;
         }
     }else{
         return array('status' => 'error', 'message' => 'User not authorized!');
