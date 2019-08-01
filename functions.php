@@ -194,6 +194,11 @@ add_action('rest_api_init', function () {
         'callback' => 'fetch_collection'
     ));
 
+    register_rest_route('wp/v2', '/team_collection', array(
+        'methods' => 'GET',
+        'callback' => 'fetch_team_collection'
+    ));
+
     register_rest_route('wp/v2', '/collection/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'fetch_collection'
@@ -521,6 +526,38 @@ function portfolio_collections(WP_REST_Request $request)
     }
 
     return array('status' => 'error', 'message' => 'Portfolio and Author IDs required!');
+}
+
+function fetch_team_collection(WP_REST_Request $request)
+{
+    global $wpdb;
+    $user_id = get_current_user_id();
+    if ($user_id) {
+        $user_info = get_userdata($user_id);
+        $user_role = $user_info->roles[0];
+        $team_collections = $wpdb->get_results(
+            "SELECT DISTINCT post_id, post_title, display_name
+                FROM ( SELECT *
+                    FROM wp_postmeta AS pm 
+                            JOIN wp_posts AS p  
+                            ON pm.post_id = p.ID
+                            AND post_type='collection'
+                            AND (post_status = 'publish' OR post_status = 'private')) AS A
+                JOIN ( SELECT *
+                    FROM wp_users INNER JOIN wp_usermeta 
+                    ON wp_users.ID = wp_usermeta.user_id 
+                    WHERE wp_usermeta.meta_key = 'wp_capabilities' 
+                    AND wp_usermeta.meta_value LIKE '%$user_role%') AS B
+                
+                ON A.post_author=B.ID
+                WHERE post_author != $user_id"
+        );
+
+        return array('status' => 'success', 'team_collection' => $team_collections);
+    }
+
+    return array('status' => 'error', 'message' => 'Portfolio and Author IDs required!');
+
 }
 
 function add_token(WP_REST_Request $request_data)
