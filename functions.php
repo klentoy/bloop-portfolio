@@ -5,7 +5,7 @@
 # custom field is not available
 include '_customs/acf_exported_fields.php';
 
-include '_customs/custom_tables.php';
+// include '_customs/custom_tables.php';
 
 include '_customs/post_type_portfolio.php';
 include '_customs/post_type_collection.php';
@@ -640,8 +640,7 @@ function get_post_tokens(WP_REST_Request $request)
 function fetch_portfolio(WP_REST_Request $request)
 {
     $type = isset($_GET['type']) ? $_GET['type'] : '';
-
-    if ($id = $request['id']) {
+    if ( $id = $request['id'] ) {
         $args = array(
             'post_type' => 'portfolio',
             'post_id' => $id,
@@ -666,7 +665,7 @@ function fetch_portfolio(WP_REST_Request $request)
                 return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
             }
 
-        } else if (get_current_user_id()) {
+        } else if ( get_current_user_id() ) {
             $portf = (array) get_post($id);
             $meta = set_portfolio_meta($id);
             $portf['proj_tags'] = $meta['proj_tags'];
