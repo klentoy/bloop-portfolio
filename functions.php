@@ -254,6 +254,11 @@ add_action('rest_api_init', function () {
         'callback' => 'fetch_portfolio'
     ));
 
+    register_rest_route('wp/v2', '/shared_team_collections', array(
+        'menthods' => 'GET',
+        'callback' => 'my_shared_team_collections'
+    ));
+
     register_rest_route('wp/v2', '/check_token', array(
         'menthods' => 'GET',
         'callback' => 'check_token'
@@ -536,7 +541,7 @@ function fetch_team_collection(WP_REST_Request $request)
         $user_info = get_userdata($user_id);
         $user_role = $user_info->roles[0];
         $team_collections = $wpdb->get_results(
-            "SELECT DISTINCT post_id, post_title, display_name
+            "SELECT DISTINCT post_id, post_title, display_name, post_date
                 FROM ( SELECT *
                     FROM wp_postmeta AS pm 
                             JOIN wp_posts AS p  
@@ -550,7 +555,9 @@ function fetch_team_collection(WP_REST_Request $request)
                     AND wp_usermeta.meta_value LIKE '%$user_role%') AS B
                 
                 ON A.post_author=B.ID
-                WHERE post_author != $user_id"
+                WHERE post_author != $user_id
+                ORDER BY post_date DESC"
+                
         );
 
         return array('status' => 'success', 'team_collection' => $team_collections);
@@ -567,6 +574,7 @@ function add_token(WP_REST_Request $request_data)
     $collection_id = $body->collection_id; // Importante
     $author = $body->author; // Importante
     $remarks = $body->collection_name ? $body->collection_name : "N/A";
+    $share_type = $body->share_type;
     $token_generated = bloop_wof_tokenizer();
 
     if (!$collection_id || !$author)
@@ -576,6 +584,7 @@ function add_token(WP_REST_Request $request_data)
         "collection_id" => $collection_id,
         "author" => $author,
         "remarks" => $remarks,
+        "share_type" => $share_type,
         "token_generated" => $token_generated,
     ));
 
@@ -620,6 +629,11 @@ function get_all_token($token)
     return false;
 }
 
+/** add share_type column to wp_blooptoken
+ * ALTER TABLE wp_blooptoken
+ * ADD share_type bigint(20) unsigned
+*/
+
 function get_post_tokens(WP_REST_Request $request)
 {
     global $wpdb;
@@ -628,7 +642,8 @@ function get_post_tokens(WP_REST_Request $request)
     if ($id = $request['id']) {
 
         if($post_type == 'collection'){
-            return $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE collection_id = $id and author = $author_id AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
+            $share_type = $request['share_type'];
+            return $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE collection_id = $id and author = $author_id AND share_type = $share_type AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
         } else if ($post_type == 'portfolio'){
             return $wpdb->get_results("SELECT * FROM wp_portfoliotoken WHERE project_id = $id and author = $author_id AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
         }
@@ -761,6 +776,33 @@ function search_any(WP_REST_Request $request) {
             ),
             "portfolios" => $portfolio_results
         );
+    }
+    return false;
+}
+
+function my_shared_team_collections() {
+    if ( $author_id  = get_current_user_id() ){
+        global $wpdb;
+        if ($author_id) {
+            if ( ! $shared_collections = $wpdb->get_results("SELECT DISTINCT collection_id FROM ". $wpdb->prefix."blooptoken WHERE author = '$author_id' AND share_type = 2 ORDER BY created_at DESC", OBJECT) ){
+                $collections = array('status' => 'error', 'message' => 'No shared portfolios found!');
+            }
+            
+            $collection_ids = array();
+            foreach ($shared_collections as $collection) {
+                array_push($collection_ids, $collection->collection_id);
+            }
+
+            $args = array(
+                'post_type'   => 'collection',
+                'post__in' => $collection_ids,
+            );
+            $collections = get_posts($args);            
+
+            return $collections;
+        }
+    }else{
+        return array('status' => 'error', 'message' => 'User not authorized!');
     }
     return false;
 }
