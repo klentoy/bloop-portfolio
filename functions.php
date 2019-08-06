@@ -1,4 +1,9 @@
 <?php
+// function add_cors_http_header()
+// {
+//     header("Access-Control-Allow-Origin: *");
+// }
+// add_action('init', 'add_cors_http_header');
 
 # ACF CUSTOM FIELDS
 # this will be used as reference or 
@@ -143,10 +148,10 @@ add_theme_support('post-thumbnails');
 function get_tokens($token)
 {
     global $wpdb;
-    
+
     if ($token) {
         $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "blooptoken WHERE token_generated = '{$token}' AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW()", OBJECT);
-        if ( ! $results ){
+        if (!$results) {
             $results = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "portfoliotoken WHERE token_generated = '{$token}' AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW()", OBJECT);
         }
         return $results;
@@ -160,20 +165,21 @@ function remove_token(WP_REST_Request $request)
     $bt_id = $request['bt_id'];
     $post_type = $request['post_type'];
     if ($bt_id) {
-        if($post_type == 'collection'){
+        if ($post_type == 'collection') {
             $results = $wpdb->get_results("DELETE FROM " . $wpdb->prefix . "blooptoken WHERE bt_id = '{$bt_id}'", OBJECT);
-        } else if($post_type == 'portfolio') {
+        } else if ($post_type == 'portfolio') {
             $results = $wpdb->get_results("DELETE FROM " . $wpdb->prefix . "portfoliotoken WHERE bt_id = '{$bt_id}'", OBJECT);
         }
         return array('status' => 'succes', 'message' => 'Successfully removed ' . $bt_id);
     }
-    return $bt_id;    
+    return $bt_id;
 }
 
-function check_token(WP_REST_Request $request){
+function check_token(WP_REST_Request $request)
+{
     $tokens = get_tokens($request['token']);
-    if($tokens){
-        return array('status'=> true, 'created_at' => $tokens[0]->created_at);
+    if ($tokens) {
+        return array('status' => true, 'created_at' => $tokens[0]->created_at);
     }
     return false;
 }
@@ -228,7 +234,7 @@ add_action('rest_api_init', function () {
         'methods' => 'POST',
         'callback' => 'remove_token'
     ));
-    
+
     register_rest_route('wp/v2', '/add_project_token', array( // SINGLE PROJECT. e.g. single portfolio, etc...
         'methods' => 'POST',
         'callback' => 'add_project_token'
@@ -265,7 +271,7 @@ add_action('rest_api_init', function () {
     ));
 
     register_rest_route('wp/v2', '/users', array(
-        'methods'             => WP_REST_Server::READABLE,
+        'methods'             => 'GET',
         'callback'            => 'get_user_list',
         'show_in_rest' => true
     ));
@@ -281,7 +287,7 @@ add_action('rest_api_init', function () {
     ));
 
     register_rest_route('wp/v2', '/my_shared_portfolios', array(
-        'methods' => WP_REST_Server::READABLE,
+        'methods' => 'GET',
         'callback' => 'my_shared_portfolios'
     ));
 });
@@ -299,11 +305,11 @@ function share_collection(WP_REST_Request $request)
         $sharer_name = get_user_meta($authorized, 'first_name', true) . ' ' . get_user_meta($authorized, 'last_name', true);
         $share_type = $body->type;
 
-        if($share_type == 'collection'){
+        if ($share_type == 'collection') {
             $e_t = "Hi $user_fullname, $sharer_name shared this collection: ";
             $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
             $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->post_id . "</a>";
-        } else if($share_type == 'portfolio') {
+        } else if ($share_type == 'portfolio') {
             $e_t = "Hi $user_fullname, $sharer_name shared this website: ";
             $e_t .= "<a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
             $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "</a>";
@@ -315,9 +321,9 @@ function share_collection(WP_REST_Request $request)
             'Reply-To: ' . get_bloginfo('admin_email') . "\r\n" .
             'Content-Type: text/html; charset=UTF-8' . "\r\n";
 
-        if($share_type == 'collection'){
+        if ($share_type == 'collection') {
             wp_mail($user_email, "Collection Shared by $sharer_name", $e_t, $headers);
-        } else if($share_type == 'portfolio') {
+        } else if ($share_type == 'portfolio') {
             wp_mail($user_email, "Website Shared by $sharer_name", $e_t, $headers);
         }
 
@@ -557,14 +563,13 @@ function fetch_team_collection(WP_REST_Request $request)
                 ON A.post_author=B.ID
                 WHERE post_author != $user_id
                 ORDER BY post_date DESC"
-                
+
         );
 
         return array('status' => 'success', 'team_collection' => $team_collections);
     }
 
     return array('status' => 'error', 'message' => 'Portfolio and Author IDs required!');
-
 }
 
 function add_token(WP_REST_Request $request_data)
@@ -586,6 +591,7 @@ function add_token(WP_REST_Request $request_data)
         "remarks" => $remarks,
         "share_type" => $share_type,
         "token_generated" => $token_generated,
+        "created_at" => current_time( 'mysql' )
     ));
 
     if ($tokenized)
@@ -598,10 +604,10 @@ function add_project_token(WP_REST_Request $request_data)
     $body = json_decode($request_data->get_body());
     $project_id = $body->project_id; // Importante
     $author = $body->author; // Importante
-    $type = $body->type ? str_replace(' ', '-', strtolower($body->type)) : "N/A"; 
+    $type = $body->type ? str_replace(' ', '-', strtolower($body->type)) : "N/A";
     $remarks = $body->remarks ? $body->remarks : "N/A";
     $token_generated = bloop_wof_tokenizer();
-    
+
     if (!$project_id || !$author)
         return array('status' => 'error', 'message' => 'No Project ID or author!');
 
@@ -616,8 +622,8 @@ function add_project_token(WP_REST_Request $request_data)
 
     if ($tokenized)
         return array('status' => 'success', 'token_id' => $wpdb->insert_id, 'project_id' => $project_id, "token_generated" => $token_generated);
-    else 
-    return false;
+    else
+        return false;
 }
 
 function get_all_token($token)
@@ -632,7 +638,7 @@ function get_all_token($token)
 /** add share_type column to wp_blooptoken
  * ALTER TABLE wp_blooptoken
  * ADD share_type bigint(20) unsigned
-*/
+ */
 
 function get_post_tokens(WP_REST_Request $request)
 {
@@ -641,13 +647,12 @@ function get_post_tokens(WP_REST_Request $request)
     $post_type = $request['post_type'];
     if ($id = $request['id']) {
 
-        if($post_type == 'collection'){
+        if ($post_type == 'collection') {
             $share_type = $request['share_type'];
             return $wpdb->get_results("SELECT * FROM wp_blooptoken WHERE collection_id = $id and author = $author_id AND share_type = $share_type AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
-        } else if ($post_type == 'portfolio'){
+        } else if ($post_type == 'portfolio') {
             return $wpdb->get_results("SELECT * FROM wp_portfoliotoken WHERE project_id = $id and author = $author_id AND created_at BETWEEN NOW() - INTERVAL 30 DAY AND NOW() ORDER BY created_at DESC", OBJECT);
         }
-        
     }
     return false;
 }
@@ -655,7 +660,7 @@ function get_post_tokens(WP_REST_Request $request)
 function fetch_portfolio(WP_REST_Request $request)
 {
     $type = isset($_GET['type']) ? $_GET['type'] : '';
-    if ( $id = $request['id'] ) {
+    if ($id = $request['id']) {
         $args = array(
             'post_type' => 'portfolio',
             'post_id' => $id,
@@ -664,27 +669,26 @@ function fetch_portfolio(WP_REST_Request $request)
         if ($token = get_tokens($request["token"])) {
             $project_id = $token[0]->project_id ? $token[0]->project_id : '';
             $collection_id = $token[0]->collection_id ? $token[0]->collection_id : '';
-            if ( $project_id == $id ){
+            if ($project_id == $id) {
                 $portf = (array) get_post($id);
                 $meta = set_portfolio_meta($id);
                 $portf['proj_tags'] = $meta['proj_tags'];
-                $portf['colors'] = $meta['colors'];           
+                $portf['colors'] = $meta['colors'];
                 return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
             }
             $collection = get_field('bloop_portfolios', $collection_id);
-            if ( $porfolio_id = portfolio_search($id, $collection) ){
+            if ($porfolio_id = portfolio_search($id, $collection)) {
                 $portf = (array) get_post($porfolio_id);
                 $meta = set_portfolio_meta($porfolio_id);
                 $portf['proj_tags'] = $meta['proj_tags'];
                 $portf['colors'] = $meta['colors'];
                 return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
             }
-
-        } else if ( get_current_user_id() ) {
+        } else if (get_current_user_id()) {
             $portf = (array) get_post($id);
             $meta = set_portfolio_meta($id);
             $portf['proj_tags'] = $meta['proj_tags'];
-            $portf['colors'] = $meta['colors'];   
+            $portf['colors'] = $meta['colors'];
             return array_merge($portf, is_array(get_fields($id)) ? get_fields($id) : array());
         } else {
             return array('status' => 'error', 'message' => 'No Token or unauthorized!');
@@ -697,7 +701,8 @@ function fetch_portfolio(WP_REST_Request $request)
     }
 }
 
-function set_portfolio_meta($id) {
+function set_portfolio_meta($id)
+{
     $cats = get_the_terms($id, 'portfolio_categories');
     $tags = get_the_terms($id, 'portfolio_tags');
     $product_type = get_the_terms($id, 'product_type');
@@ -714,14 +719,15 @@ function set_portfolio_meta($id) {
     return array('proj_tags' => $proj_tags, 'colors' => $colors);
 }
 
-function portfolio_search($id, $array) {
+function portfolio_search($id, $array)
+{
     foreach ($array as $key => $val) {
         if ($val['bloop_collection_portfolio'] == $id) {
             return $id;
         }
     }
     return null;
- }
+}
 
 function all_collections(WP_REST_Request $request)
 {
@@ -742,7 +748,8 @@ function all_collections(WP_REST_Request $request)
     }
 }
 
-function search_any(WP_REST_Request $request) {
+function search_any(WP_REST_Request $request)
+{
     $search_text = $request['s'];
     global $wpdb;
     $porfolio_ids = "";
@@ -780,14 +787,15 @@ function search_any(WP_REST_Request $request) {
     return false;
 }
 
-function my_shared_team_collections() {
-    if ( $author_id  = get_current_user_id() ){
+function my_shared_team_collections()
+{
+    if ($author_id  = get_current_user_id()) {
         global $wpdb;
         if ($author_id) {
-            if ( ! $shared_collections = $wpdb->get_results("SELECT DISTINCT collection_id FROM ". $wpdb->prefix."blooptoken WHERE author = '$author_id' AND share_type = 2 ORDER BY created_at DESC", OBJECT) ){
+            if (!$shared_collections = $wpdb->get_results("SELECT DISTINCT collection_id FROM " . $wpdb->prefix . "blooptoken WHERE author = '$author_id' AND share_type = 2 ORDER BY created_at DESC", OBJECT)) {
                 $collections = array('status' => 'error', 'message' => 'No shared portfolios found!');
             }
-            
+
             $collection_ids = array();
             foreach ($shared_collections as $collection) {
                 array_push($collection_ids, $collection->collection_id);
@@ -797,24 +805,25 @@ function my_shared_team_collections() {
                 'post_type'   => 'collection',
                 'post__in' => $collection_ids,
             );
-            $collections = get_posts($args);            
+            $collections = get_posts($args);
 
             return $collections;
         }
-    }else{
+    } else {
         return array('status' => 'error', 'message' => 'User not authorized!');
     }
     return false;
 }
 
-function my_shared_portfolios(){
-    if ( $author_id  = get_current_user_id() ){
+function my_shared_portfolios()
+{
+    if ($author_id  = get_current_user_id()) {
         global $wpdb;
         if ($author_id) {
-            if ( ! $projects = $wpdb->get_results("SELECT DISTINCT project_id FROM ". $wpdb->prefix."portfoliotoken WHERE author = '$author_id' ORDER BY created_at DESC", OBJECT) ){
+            if (!$projects = $wpdb->get_results("SELECT DISTINCT project_id FROM " . $wpdb->prefix . "portfoliotoken WHERE author = '$author_id' ORDER BY created_at DESC", OBJECT)) {
                 $projects = array('status' => 'error', 'message' => 'No shared portfolios found!');
             }
-            
+
             $project_ids = array();
             foreach ($projects as $project) {
                 array_push($project_ids, $project->project_id);
@@ -824,11 +833,11 @@ function my_shared_portfolios(){
                 'post_type'   => 'portfolio',
                 'post__in' => $project_ids,
             );
-            $portfolios = get_posts($args);            
+            $portfolios = get_posts($args);
 
             return $portfolios;
         }
-    }else{
+    } else {
         return array('status' => 'error', 'message' => 'User not authorized!');
     }
     return false;
