@@ -17,6 +17,6 @@ CREATE TABLE wp_portfoliotoken (
     remarks longtext,
     author bigint(20) UNSIGNED NOT NULL,
     type tinytext NULL,
-    created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
+    created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
     PRIMARY KEY (pt_id)
 )
