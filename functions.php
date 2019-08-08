@@ -19,6 +19,7 @@ include '_customs/tax_categories.php';
 include '_customs/tax_tags.php';
 include '_customs/tax_color.php';
 include '_customs/user_roles.php';
+include '_customs/admin-bloop.php';
 
 add_filter('register_taxonomy_args', 'custom_taxonomies', 10, 2);
 function custom_taxonomies($args, $taxonomy_name)
@@ -546,25 +547,33 @@ function fetch_team_collection(WP_REST_Request $request)
     if ($user_id) {
         $user_info = get_userdata($user_id);
         $user_role = $user_info->roles[0];
-        $team_collections = $wpdb->get_results(
-            "SELECT DISTINCT post_id, post_title, display_name, post_date
-                FROM ( SELECT *
-                    FROM wp_postmeta AS pm 
-                            JOIN wp_posts AS p  
-                            ON pm.post_id = p.ID
-                            AND post_type='collection'
-                            AND (post_status = 'publish' OR post_status = 'private')) AS A
-                JOIN ( SELECT *
-                    FROM wp_users INNER JOIN wp_usermeta 
-                    ON wp_users.ID = wp_usermeta.user_id 
-                    WHERE wp_usermeta.meta_key = 'wp_capabilities' 
-                    AND wp_usermeta.meta_value LIKE '%$user_role%') AS B
-                
-                ON A.post_author=B.ID
-                WHERE post_author != $user_id
-                ORDER BY post_date DESC"
+        
+        $allowed_roles = get_option('bloop_option_' . strtolower($user_role));
+        $allowed_roles = $allowed_roles[strtolower($user_role)];
 
-        );
+        $sql = "SELECT DISTINCT post_id, post_title, display_name, post_date
+        FROM ( SELECT *
+            FROM wp_postmeta AS pm 
+                    JOIN wp_posts AS p  
+                    ON pm.post_id = p.ID
+                    AND post_type='collection'
+                    AND (post_status = 'publish' OR post_status = 'private')) AS A
+        JOIN ( SELECT *
+            FROM wp_users INNER JOIN wp_usermeta 
+            ON wp_users.ID = wp_usermeta.user_id 
+            WHERE wp_usermeta.meta_key = 'wp_capabilities'";
+        $sql .= " AND wp_usermeta.meta_value LIKE '%$user_role%'";
+        if ( $allowed_roles ){
+            foreach($allowed_roles as $r){
+                $sql .= " OR wp_usermeta.meta_value LIKE '%$r%'";
+            }
+        }
+        $sql .= ") AS B";
+        $sql .= " ON A.post_author=B.ID
+        WHERE post_author != $user_id
+        ORDER BY post_date DESC";
+        
+        $team_collections = $wpdb->get_results($sql);
 
         return array('status' => 'success', 'team_collection' => $team_collections);
     }
