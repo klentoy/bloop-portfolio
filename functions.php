@@ -547,9 +547,11 @@ function fetch_team_collection(WP_REST_Request $request)
     if ($user_id) {
         $user_info = get_userdata($user_id);
         $user_role = $user_info->roles[0];
-        
-        $allowed_roles = get_option('bloop_option_' . strtolower($user_role));
-        $allowed_roles = $allowed_roles[strtolower($user_role)];
+        $allowed_roles = array();
+        if ( get_option('bloop_option_' . strtolower($user_role)) ){
+            $allowed_roles = get_option('bloop_option_' . strtolower($user_role));
+            $allowed_roles = $allowed_roles[strtolower($user_role)];
+        }
 
         $sql = "SELECT DISTINCT post_id, post_title, display_name, post_date
         FROM ( SELECT *
@@ -572,7 +574,7 @@ function fetch_team_collection(WP_REST_Request $request)
         $sql .= " ON A.post_author=B.ID
         WHERE post_author != $user_id
         ORDER BY post_date DESC";
-        
+
         $team_collections = $wpdb->get_results($sql);
 
         return array('status' => 'success', 'team_collection' => $team_collections);
