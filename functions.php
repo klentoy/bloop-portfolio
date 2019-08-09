@@ -818,7 +818,13 @@ function my_shared_team_collections()
             );
             $collections = get_posts($args);
 
-            return $collections;
+            foreach ($collections as $collection) {
+                $author_name = get_author_name( $collection->post_author );
+                $collection->author_name = $author_name;
+            }
+
+            //return $collections;
+            return array('status' => 'success', 'collections' => $collections);
         }
     } else {
         return array('status' => 'error', 'message' => 'User not authorized!');
