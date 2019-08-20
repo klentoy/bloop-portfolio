@@ -898,6 +898,7 @@ function jwt_auth_function($data, $user)
     $user_data = $user->data;
     $data['user_id'] = $user_data->ID;
     $data['user_role'] = $user->roles[0];
+    $data['display_name'] = $user_data->display_name;
     return $data;
 }
 add_filter('jwt_auth_token_before_dispatch', 'jwt_auth_function', 10, 2);
