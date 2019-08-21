@@ -246,6 +246,11 @@ add_action('rest_api_init', function () {
         'callback' => 'get_all_token'
     ));
 
+    register_rest_route('wp/v2', 'portfolio_categories', array(
+        'methods' => 'GET',
+        'callback' => 'get_portfolio_categories'
+    ));
+
     register_rest_route('wp/v2', 'get_post_tokens/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'get_post_tokens'
@@ -646,6 +651,20 @@ function get_all_token($token)
     return false;
 }
 
+function get_portfolio_categories()
+{
+    global $wpdb;
+        $categories = $wpdb->get_results(
+            "SELECT termtax.term_id as id, terms.name, terms.slug, termtax.taxonomy
+            FROM wp_term_taxonomy AS termtax 
+            JOIN wp_terms AS terms
+            ON termtax.term_id = terms.term_id
+            WHERE taxonomy = 'portfolio_categories'
+            ORDER BY terms.name ASC"
+        );
+    return $categories;
+}
+
 /** add share_type column to wp_blooptoken
  * ALTER TABLE wp_blooptoken
  * ADD share_type bigint(20) unsigned
@@ -812,15 +831,19 @@ function my_shared_team_collections()
                 array_push($collection_ids, $collection->collection_id);
             }
 
-            $args = array(
-                'post_type'   => 'collection',
-                'post__in' => $collection_ids,
-            );
-            $collections = get_posts($args);
-
-            foreach ($collections as $collection) {
-                $author_name = get_author_name( $collection->post_author );
-                $collection->author_name = $author_name;
+            if($collection_ids){
+                $args = array(
+                    'post_type'   => 'collection',
+                    'post__in' => $collection_ids,
+                );
+                $collections = get_posts($args);
+    
+                foreach ($collections as $collection) {
+                    $author_name = get_author_name( $collection->post_author );
+                    $collection->author_name = $author_name;
+                }
+            } else {
+                $collections = [];
             }
 
             //return $collections;
