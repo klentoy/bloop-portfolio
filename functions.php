@@ -308,20 +308,42 @@ function share_collection(WP_REST_Request $request)
         $user_fullname = get_user_meta($body->user_id, 'first_name', true) . ' ' . get_user_meta($body->user_id, 'last_name', true);
         $post_name = get_the_title($body->post_id);
 
-        $sharer_name = get_user_meta($authorized, 'first_name', true) . ' ' . get_user_meta($authorized, 'last_name', true);
+        if ( get_user_meta($authorized, 'first_name', true) && get_user_meta($authorized, 'last_name', true)){
+            $sharer_name = get_user_meta($authorized, 'first_name', true) . ' ' . get_user_meta($authorized, 'last_name', true);
+        }else{
+            $user_info = get_userdata($body->user_id);
+            $sharer_name = $user_info->user_login;
+        }
         $share_type = $body->type;
 
-        if ($share_type == 'collection') {
-            $e_t = "Hi $user_fullname, $sharer_name shared this collection: ";
-            $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
-            $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->post_id . "</a>";
-        } else if ($share_type == 'portfolio') {
-            $e_t = "Hi $user_fullname, $sharer_name shared this website: ";
-            $e_t .= "<a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
-            $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "</a>";
-        } else {
-            return array('status' => 'error', 'message' => 'Invalid share type!');
-        }
+        $e_t = "<div style='width: 800px; margin: 0 auto; background-color: #ffffff; padding: 0; font-family: Verdana, 'Open Sans',Calibri,Arial,sans-serif;'>";
+        $e_t .= "<table width='100%;'>";
+        $e_t .= "<tr>";
+            $e_t .= "<td colspan='6' style='background: url(http://site59.platypustest.info/api/wp-content/uploads/2019/08/Bloop-Final-Logo.png) no-repeat #043954;background-size: cover;background-position: center;height: 200px;'>";
+            $e_t .= "</td>";
+        $e_t .= "</tr>";
+        $e_t .= "<tr>";
+            $e_t .= "<td colspan='6' style='font-size: 30px; padding: 20px 30px;'>";
+            if ($share_type == 'collection') {
+                $e_t .= "Hi $user_fullname, <br/>";
+                $e_t .= "<p> $sharer_name shared this collection: ";
+                    $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
+                    $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->post_id . "</a>";
+                $e_t .= "</p>";
+            } else if ($share_type == 'portfolio') {
+                $e_t .= "Hi $user_fullname, <br/>";
+                $e_t .= "<p>$sharer_name shared this website: ";
+                    $e_t .= "<a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
+                    $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "</a>";
+                $e_t .= "</p>";
+            } else {
+                return array('status' => 'error', 'message' => 'Invalid share type!');
+            }
+            $e_t .= "</td>";
+        $e_t .= "</tr>";
+        $e_t .= "</table>";
+        $e_t .= "</div>";
+
 
         $headers = 'From: ' . get_bloginfo('admin_email') . "\r\n" .
             'Reply-To: ' . get_bloginfo('admin_email') . "\r\n" .
