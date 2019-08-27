@@ -877,7 +877,7 @@ function my_shared_team_collections()
     return false;
 }
 
-function my_shared_portfolios()
+function my_shared_portfolios(WP_REST_Request $request)
 {
     if ($author_id  = get_current_user_id()) {
         global $wpdb;
