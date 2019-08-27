@@ -328,13 +328,13 @@ function share_collection(WP_REST_Request $request)
                 $e_t .= "Hi $user_fullname, <br/>";
                 $e_t .= "<p> $sharer_name shared this collection: ";
                     $e_t .= "<a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
-                    $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/collection/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/collection/" . $body->post_id . "</a>";
+                    $e_t .= "Full Link <a href='" . $_SERVER['SERVER_NAME'] . "/collection/" . $body->post_id . "' target='_blank'>" . $_SERVER['SERVER_NAME'] . "/collection/" . $body->post_id . "</a>";
                 $e_t .= "</p>";
             } else if ($share_type == 'portfolio') {
                 $e_t .= "Hi $user_fullname, <br/>";
                 $e_t .= "<p>$sharer_name shared this website: ";
                     $e_t .= "<a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>$post_name</a> <br/>";
-                    $e_t .= "Full Link <a href='" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "' target='_blank'>" . get_bloginfo('url') . "/portfolio/" . $body->post_id . "</a>";
+                    $e_t .= "Full Link <a href='" . $_SERVER['SERVER_NAME'] . "/portfolio/" . $body->post_id . "' target='_blank'>" . $_SERVER['SERVER_NAME'] . "/portfolio/" . $body->post_id . "</a>";
                 $e_t .= "</p>";
             } else {
                 return array('status' => 'error', 'message' => 'Invalid share type!');
