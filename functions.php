@@ -251,6 +251,17 @@ add_action('rest_api_init', function () {
         'callback' => 'get_portfolio_categories'
     ));
 
+    register_rest_route('wp/v2', 'portfolio_tags', array(
+        'methods' => 'GET',
+        'callback' => 'get_portfolio_tags'
+    ));
+
+    register_rest_route('wp/v2', 'portfolio_colors', array(
+        'methods' => 'GET',
+        'callback' => 'get_portfolio_colors'
+    ));
+
+
     register_rest_route('wp/v2', 'get_post_tokens/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'get_post_tokens'
@@ -686,6 +697,35 @@ function get_portfolio_categories()
         );
     return $categories;
 }
+
+function get_portfolio_tags()
+{
+    global $wpdb;
+        $tags = $wpdb->get_results(
+            "SELECT termtax.term_id as id, terms.name, terms.slug, termtax.taxonomy
+            FROM wp_term_taxonomy AS termtax 
+            JOIN wp_terms AS terms
+            ON termtax.term_id = terms.term_id
+            WHERE taxonomy = 'portfolio_tags'
+            ORDER BY terms.name ASC"
+        );
+    return $tags;
+}
+
+function get_portfolio_colors()
+{
+    global $wpdb;
+        $colors = $wpdb->get_results(
+            "SELECT termtax.term_id as id, terms.name, terms.slug, termtax.taxonomy
+            FROM wp_term_taxonomy AS termtax 
+            JOIN wp_terms AS terms
+            ON termtax.term_id = terms.term_id
+            WHERE taxonomy = 'portfolio_colors'
+            ORDER BY terms.name ASC"
+        );
+    return $colors;
+}
+
 
 /** add share_type column to wp_blooptoken
  * ALTER TABLE wp_blooptoken
